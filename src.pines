@@ -1,0 +1,88 @@
+
+window(16, 8, 220 - 32, 176 - 8);
+
+var water = builtin("water1");
+var boat = builtin("boat");
+var x = 110 - 8, y = 88 - 8;
+function update(){
+    if(pressed("A")){
+        cursor(24, 10);
+        color(24);
+        print("A PRESSED");
+    }
+
+    if(pressed("LEFT")){
+        x--;
+        if(x == -16) x = 220;
+    }
+
+    if(pressed("RIGHT")){
+        x++;
+        if(x == 220) x = -16;
+    }
+
+    cursor(24, 10);
+    printNumber(x);
+    if(x > 110) print("> ");
+    if(x >= 110) print(">= ");
+    if(x < 110) print("< ");
+    if(x <= 110) print("<= ");
+
+    color(0);
+    sprite(x, y, boat);
+    color(random(0, 16) * 16);
+    for(var i = 0; i != 5; ++i){
+        tile(random(0, 27), random(0, 22), water);
+    }
+}
+
+/*
+function other(){
+    print(y++);
+    var z = new Array(20);
+    for(i in z)
+        z[i] = new Array(10);
+    z[0][0] = 3;
+    var t = z[0][0];
+    print(t);
+    for(x of z)
+        print(x[0]);
+}
+function update(){
+    var x = "Hello World! ";
+    print(x);
+    other();
+}
+
+/*
+var a = 1;
+var b = 2;
+var c = a + b;
+var cnum = 1;
+
+function update(){
+    print(cnum++);
+    var d = new Array(4);
+    d[0] = 5;
+    d[1] = 6;
+    d[2] = 7;
+    d[3] = 8;
+    var z = 5;
+    do {
+        print(z);
+    } while(z--);
+    c = 3;
+    // while(c--){
+    //     print(c)
+    // }
+    print(7);
+    for(var x in d){
+        if(x - 1)
+            print(x + 1);
+    }
+    for(var x of d)
+        print(x);
+    for(var x = 0; x != 9; ++x)
+        print(x);
+}
+*/
