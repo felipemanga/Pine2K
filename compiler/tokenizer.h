@@ -213,7 +213,7 @@ public:
             }
         }
 
-        for(const char *s = "+=*^%<>"; *s; ++s){
+        for(const char *s = "+=*^%<>&|"; *s; ++s){
             if( next == *s ){
                 tokClass = TokenClass::Operator;
                 read();

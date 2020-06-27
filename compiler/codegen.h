@@ -223,10 +223,14 @@ namespace cg {
 
         template<typename T>
         BufferWriter& operator << (T opcode){
-            while((pos + offset) >= (BufferSize >> 1));
-            buffer[offset + pos++] = opcode;
-            if(sizeof(T) == 4){
-                buffer[offset + pos++] = opcode >> 16;
+            if((pos + offset) >= (BufferSize >> 1)){
+                pos++;
+                pos += sizeof(T) == 4;
+            }else{
+                buffer[offset + pos++] = opcode;
+                if(sizeof(T) == 4){
+                    buffer[offset + pos++] = opcode >> 16;
+                }
             }
             if(pos > max) max = pos;
             return *this;
@@ -259,6 +263,9 @@ namespace cg {
         }
 
         u16 read(){
+            if((pos + offset) >= (BufferSize >> 1)){
+                return 0;
+            }
             return buffer[offset + pos++];
         }
     };
@@ -291,7 +298,10 @@ namespace cg {
         }
 
         constexpr u32 s(RegLow r, u32 p){
-            if(r.value > 7) error = "Forbidden High Reg";
+            if(r.value > 7){
+                error = "Forbidden High Reg";
+                while(true);
+            }
             return r.value << p;
         }
 
@@ -335,8 +345,11 @@ namespace cg {
         }
 
         void link(){
-            if(error)
+            if(error){
+                LOG(error);
+                while(true);
                 return;
+            }
             LOGD("Linking\n");
             u32 end = writer.tell();
             writer.seek(0);
@@ -511,7 +524,7 @@ namespace cg {
             }
         }
 
-        OP16(ADCS, (RL rm, RL rdn), (0b0100'0001'0100'0000 | s(rm, 3) | s(rdn, 0)))
+        OP16(ADCS, (RL rdn, RL rm), (0b0100'0001'0100'0000 | s(rm, 3) | s(rdn, 0)))
 
         OP16(ADDS, (RL rd, RL rn, I3 i), (0b0001'1100'0000'0000 | s(i, 6) | s(rn, 3) | s(rd, 0)))
 
@@ -640,6 +653,15 @@ namespace cg {
         OP16(LDRSB, (RL rt, RL rn, RL rm), (0b0101'0110'0000'0000 | s(rt, 0) | s(rn, 3) | s(rm, 6)))
 
         OP16(LDRSH, (RL rt, RL rn, RL rm), (0b0101'1110'0000'0000 | s(rt, 0) | s(rn, 3) | s(rm, 6)))
+
+        void MODS(RL rd, I8 imm){
+            if(!imm.value){
+                MOVS(rd, 0);
+            }else{
+                LSLS(rd, 32 - imm.value);
+                LSRS(rd, 32 - imm.value);
+            }
+        }
 
         OP16(LSLS, (RL rd, RL rm, Imm<5, 0> imm), (0b0000'0000'0000'0000 | s(rd, 0) | s(rm, 3) | s(imm, 6)))
 

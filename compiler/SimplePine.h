@@ -179,29 +179,31 @@ namespace pines {
             {
                 setConstant("Array", arrayCtr);
                 MemOps::set(reinterpret_cast<void*>(dataSection), 0, 0x800);
+                MemOps::set(reinterpret_cast<void*>(codeSection), 0, 0x800);
             }
 
         template<typename type>
-        void setConstant(const char *name, type&& value){
-            pines.createGlobal(name).setConstant(value);
+        void setConstant(const char *name, type&& value, bool isConstexpr = false){
+            auto &sym = pines.createGlobal(name);
+            sym.setConstant(value);
+            if(isConstexpr)
+                sym.setConstexpr();
         }
 
         bool compile(){
             using namespace cg;
-            cg.LDR(R0, 0);
-            cg.LDR(R1, 1);
-            cg.ADD(R0, PC);
-            cg[Label(u32(-1))];
-            cg.CMP(R1, 0);
-            cg.B(EQ, Label(u32(-2)));
-            cg.LDM(R0, R2, R3);
-            cg.SUBS(R1, 1);
-            cg.STR(R3, R2, 0);
-            cg.B(Label(u32(-1)));
-            cg.POOL();
-            cg[Label(u32(-2))];
-            cg.NOP();
-            cg.link();
+            // cg.LDR(R0, 0xCCBBDDEE);
+            // cg.LDR(R1, 1);
+            // cg[Label(u32(-1))].CMP(R1, 0);
+            // cg.B(EQ, Label(u32(-2)));
+            // cg.LDM(R0, R2, R3);
+            // cg.SUBS(R1, 1);
+            // cg.STR(R3, R2, 0);
+            // cg.B(Label(u32(-1)));
+            // cg.POOL();
+            // cg[Label(u32(-2))];
+            // cg.NOP();
+            // cg.link();
 
             pines.parseGlobal();
             if(pines.getError())
@@ -227,31 +229,46 @@ namespace pines {
             if(pines.getError())
                 return false;
 
-            u32 init = cg.tell();
-            if(init & 0x2){
-                cg.NOP();
-                init -= 6;
-            }else{
-                init -= 8;
-            }
+            // u32 init = cg.tell();
+            // if(init & 0x2){
+            //     cg.NOP();
+            //     init+=2;
+            // }
+
+            // init += codeSection;
+
+            // u32 id = 0, len = 0;
+            // for(auto &sym : pines.symbols()){
+            //     if(sym.memInit() && sym.init && sym.address != 0xFFFF){
+            //         u32 address = dataSection + (sym.address << 2);
+            //         LOG("MemInit ", id, " ", (void*) address, " ", (void *) sym.init, "\n");
+            //         cg.U32(address);
+            //         cg.U32(sym.init);
+            //         len++;
+            //     }
+            //     id++;
+            // }
+
 
             u32 id = 0, len = 0;
             for(auto &sym : pines.symbols()){
-                if(sym.memInit() && sym.address != 0xFFFF){
-                    u32 address = dataSection + (sym.address << 2);
-                    // LOGD("MemInit ", id, " ", (void*) address, " ", (void *) sym.init, "\n");
-                    cg.U32(address);
-                    cg.U32(sym.init);
+                if(sym.memInit() && sym.init && sym.address != 0xFFFF){
+                    auto address = reinterpret_cast<u32*>( dataSection + (sym.address << 2) );
+                    // LOG("MemInit ", id, " ", (void*) address, " ", (void *) sym.init, "\n");
+                    *address = sym.init;
                     len++;
                 }
                 id++;
             }
 
-            writer.seek(0x14 >> 1, true);
-            writer << u16(init)
-                   << u16(init>>16)
-                   << u16(len)
-                   << u16(len>>16);
+            LOG("PROGMEM: ", (cg.tell() * 100) / 2048, "%\n");
+            LOG("GCOUNT: ", len, "\n");
+
+            // writer.seek(0x10 >> 1, true);
+            // writer << u16(init)
+            //        << u16(init>>16)
+            //        << u16(len)
+            //        << u16(len>>16);
 
             globalCount = pines.getGlobalScopeSize();
 
