@@ -67,16 +67,18 @@ public:
 
     u32 getLocation(){ return this->source.tell(); }
 
-    void setLocation(u32 loc){
+    void setLocation(u32 loc, u32 line){
+        this->line = line - 1;
+        this->column = 0;
         this->source.seek(loc);
         read();
     }
 
     char *getText(){ return strToken; }
 
-    u32 getLine(){ return line; }
+    u32 getLine(){ return line + 1; }
 
-    u32 getColumn(){ return column + 1; }
+    u32 getColumn(){ return column; }
 
     TokenClass getClass(){ return tokClass; }
 

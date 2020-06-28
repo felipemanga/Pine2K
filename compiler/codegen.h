@@ -305,12 +305,23 @@ namespace cg {
             return r.value << p;
         }
 
+        constexpr u32 sw(RegLow r, u32 p){
+            clearConst(r);
+            return s(r, p);
+        }
+
         template<typename ImmX>
         constexpr u32 s(ImmX i, u32 p){
             return i.value << p;
         }
 
         constexpr u32 s(Reg r, u32 h, u32 l){
+            auto u = r.value;
+            return (((u>>3)&1) << h) | ((u & 7) << l);
+        }
+
+        constexpr u32 sw(Reg r, u32 h, u32 l){
+            clearConst(RL(r.value));
             auto u = r.value;
             return (((u>>3)&1) << h) | ((u & 7) << l);
         }
@@ -326,6 +337,9 @@ namespace cg {
             op |= symCount;
             symTable[symCount++] = { lbl.value, ~u32{} };
         }
+
+        u32 regHasConst = 0;
+        u32 regConst[15];
 
     public:
         CodeGen(CodeWriter& writer) : writer(writer) {}
@@ -350,6 +364,7 @@ namespace cg {
                 while(true);
                 return;
             }
+            regHasConst = 0;
             LOGD("Linking\n");
             u32 end = writer.tell();
             writer.seek(0);
@@ -465,6 +480,7 @@ namespace cg {
         using RH = RegHigh;
 
         void label(Label lbl) {
+            regHasConst = 0;
             for(u32 i=0; i<symCount; ++i){
                 if(symTable[i].hash == lbl.value){
                     if(symTable[i].address != ~u32{}){
@@ -490,9 +506,9 @@ namespace cg {
                 NOP();
                 dataStart++;
             }
-            LOGD("POOL ", reinterpret_cast<void*>(dataStart << 1), "\n");
+            // LOGD("POOL ", reinterpret_cast<void*>(dataStart << 1), "\n");
             for(u32 i=0; i<constCount; ++i){
-                LOGD("CONST ", i, " ", reinterpret_cast<void*>(constPool[i]), "\n");
+                // LOGD("CONST ", i, " ", reinterpret_cast<void*>(constPool[i]), "\n");
                 writer << constPool[i];
             }
             constCount = 0;
@@ -524,45 +540,45 @@ namespace cg {
             }
         }
 
-        OP16(ADCS, (RL rdn, RL rm), (0b0100'0001'0100'0000 | s(rm, 3) | s(rdn, 0)))
+        OP16(ADCS, (RL rdn, RL rm), (0b0100'0001'0100'0000 | s(rm, 3) | sw(rdn, 0)))
 
-        OP16(ADDS, (RL rd, RL rn, I3 i), (0b0001'1100'0000'0000 | s(i, 6) | s(rn, 3) | s(rd, 0)))
+        OP16(ADDS, (RL rd, RL rn, I3 i), (0b0001'1100'0000'0000 | s(i, 6) | s(rn, 3) | sw(rd, 0)))
 
-        OP16(ADDS, (RL rdn, I8 i), (0b0011'0000'0000'0000 | s(rdn, 8) | s(i, 0)))
+        OP16(ADDS, (RL rdn, I8 i), (0b0011'0000'0000'0000 | sw(rdn, 8) | s(i, 0)))
 
-        OP16(ADDS, (RL rd, RL rn, RL rm), (0b0001'1000'0000'0000 | s(rm, 6) | s(rn, 3) | s(rd, 0)))
+        OP16(ADDS, (RL rd, RL rn, RL rm), (0b0001'1000'0000'0000 | s(rm, 6) | s(rn, 3) | sw(rd, 0)))
 
         void ADDS(RL rnd, RL rm){
             ADDS(rnd, rnd, rm);
         }
 
-        OP16(ADD, (RX rdn, RX rm), (0b0100'0100'0000'0000 | s(rm, 3) | s(rdn, 7, 0)))
+        OP16(ADD, (RX rdn, RX rm), (0b0100'0100'0000'0000 | s(rm, 3) | sw(rdn, 7, 0)))
 
-        OP16(ADD, (RL rd, SP_t, Imm<8, 2> i), (0b1010'1000'0000'0000 | s(rd, 8) | s(i, 0)))
+        OP16(ADD, (RL rd, SP_t, Imm<8, 2> i), (0b1010'1000'0000'0000 | sw(rd, 8) | s(i, 0)))
 
         OP16(ADD, (SP_t, Imm<7, 2> i), (0b1011'0000'0000'0000 | s(i, 0)))
 
-        OP16(ADD, (RX rdm, SP_t), (0b0100'0100'1101'0000 | s(rdm, 7, 0)))
+        OP16(ADD, (RX rdm, SP_t), (0b0100'0100'1101'0000 | sw(rdm, 7, 0)))
 
         OP16(ADD, (SP_t, RX rm), (0b0100'0100'1000'0101 | s(rm, 3)))
 
-        OP16(ADR, (RL rd, Imm<8, 2> imm), (0b1010'0000'0000'0000 | s(rd, 8) | s(imm, 0)))
+        OP16(ADR, (RL rd, Imm<8, 2> imm), (0b1010'0000'0000'0000 | sw(rd, 8) | s(imm, 0)))
 
-        OP16(ANDS, (RL rdn, RL rm), (0b0100'0000'0000'0000 | s(rm, 3) | s(rdn, 0)))
+        OP16(ANDS, (RL rdn, RL rm), (0b0100'0000'0000'0000 | s(rm, 3) | sw(rdn, 0)))
 
-        OP16(ASRS, (RL rd, RL rm, Imm<5, 0> imm), (0b0001'0000'0000'0000 | s(imm, 6) | s(rm, 3) | s(rd, 0)))
+        OP16(ASRS, (RL rd, RL rm, Imm<5, 0> imm), (0b0001'0000'0000'0000 | s(imm, 6) | s(rm, 3) | sw(rd, 0)))
 
         void ASRS(RL rd, I8 imm){
             ASRS(rd, rd, imm);
         }
 
-        OP16(ASRS, (RL rdn, RL rm), (0b0100'0001'0000'0000 | s(rm, 3) | s(rdn, 0)))
+        OP16(ASRS, (RL rdn, RL rm), (0b0100'0001'0000'0000 | s(rm, 3) | sw(rdn, 0)))
 
         OP16L(B, (ConditionCode cc, Label label), label, (0b1101'0000'0000'0000 | s(cc, 8)))
 
         OP16L(B, (Label label), label, (0b1110'0000'0000'0000))
 
-        OP16(BIC, (RL rdn, RL rm), (0b0100'0011'1000'0000 | s(rm, 3) | s(rdn, 0)))
+        OP16(BIC, (RL rdn, RL rm), (0b0100'0011'1000'0000 | s(rm, 3) | sw(rdn, 0)))
 
         OP16(BKPT, (I8 i), (0b1011'1110'0000'0000 | s(i, 0)))
 
@@ -580,14 +596,30 @@ namespace cg {
 
         OP16(CMP, (RX rn, RX rm), (0b0100'0101'0000'0000 | s(rm, 3) | s(rn, 7, 0)))
 
-        OP16(EORS, (RL rdn, RL rm), (0b0100'0000'0100'0000 | s(rm, 3) | s(rdn, 0)))
+        OP16(EORS, (RL rdn, RL rm), (0b0100'0000'0100'0000 | s(rm, 3) | sw(rdn, 0)))
 
         template<typename ... Args>
-            OP16(LDM, (RL rn, Args ... rl), (0b1100'1000'0000'0000 | s(rn, 8) | (... | (1<<rl.value))));
+            OP16(LDM, (RL rn, Args ... rl), (0b1100'1000'0000'0000 | sw(rn, 8) | (... | (1<<rl.value))));
+
+        void setConst(RL rl, u32 imm){
+            regHasConst |= 1 << rl.value;
+            regConst[rl.value] = imm;
+        }
+
+        bool hasConst(RL rl){
+            return regHasConst & (1 << rl.value);
+        }
+
+        void clearConst(RL rl){
+            regHasConst &= ~(1 << rl.value);
+        }
 
         bool tryLDRS(RL rt, u32 imm){
+            if(hasConst(rt) && regConst[rt.value] == imm)
+                return true;
             if((imm & ~0xFF) == 0){
                 MOVS(rt, imm);
+                setConst(rt, imm);
                 return true;
             // }else{
             //     u32 b = imm;
@@ -606,6 +638,8 @@ namespace cg {
         }
 
         void LDR(RL rt, u32 imm){
+            if(hasConst(rt) && regConst[rt.value] == imm)
+                return;
             u32 offset = constCount;
             for(u32 i=0; i<constCount; ++i){
                 if(constPool[i] == imm){
@@ -634,25 +668,25 @@ namespace cg {
             LDR(rt, imm);
         }
 
-        OP16(LDR, (RL rt, RL rn, Imm<5, 2> imm = 0), (0b0110'1000'0000'0000 | s(imm, 6) | s(rn, 3) | s(rt, 0)))
+        OP16(LDR, (RL rt, RL rn, Imm<5, 2> imm = 0), (0b0110'1000'0000'0000 | s(imm, 6) | s(rn, 3) | sw(rt, 0)))
 
-        OP16(LDR, (RL rt, SP_t, Imm<8, 2> imm), (0b1001'1000'0000'0000 | s(rt, 8) | s(imm, 0)))
+        OP16(LDR, (RL rt, SP_t, Imm<8, 2> imm), (0b1001'1000'0000'0000 | sw(rt, 8) | s(imm, 0)))
 
-        OP16(LDR, (RL rt, PC_t, Imm<8, 2> imm), (0b0100'1000'0000'0000 | s(rt, 8) | s(imm, 0)))
+        OP16(LDR, (RL rt, PC_t, Imm<8, 2> imm), (0b0100'1000'0000'0000 | sw(rt, 8) | s(imm, 0)))
 
-        OP16(LDR, (RL rt, RL rn, RL rm), (0b0101'1000'0000'0000 | s(rm, 6) | s(rn, 3) | s(rt, 0)))
+        OP16(LDR, (RL rt, RL rn, RL rm), (0b0101'1000'0000'0000 | s(rm, 6) | s(rn, 3) | sw(rt, 0)))
 
-        OP16(LDRB, (RL rt, RL rn, Imm<5, 0> imm), (0b0111'1000'0000'0000 | s(rt, 0) | s(rn, 3) | s(imm, 6)))
+        OP16(LDRB, (RL rt, RL rn, Imm<5, 0> imm), (0b0111'1000'0000'0000 | sw(rt, 0) | s(rn, 3) | s(imm, 6)))
 
-        OP16(LDRB, (RL rt, RL rn, RL rm), (0b0101'1100'0000'0000 | s(rm, 6) | s(rn, 3) | s(rt, 0)))
+        OP16(LDRB, (RL rt, RL rn, RL rm), (0b0101'1100'0000'0000 | s(rm, 6) | s(rn, 3) | sw(rt, 0)))
 
-        OP16(LDRH, (RL rt, RL rn, Imm<5, 1> imm), (0b1000'1000'0000'0000 | s(rt, 0) | s(rn, 3) | s(imm, 6)))
+        OP16(LDRH, (RL rt, RL rn, Imm<5, 1> imm), (0b1000'1000'0000'0000 | sw(rt, 0) | s(rn, 3) | s(imm, 6)))
 
-        OP16(LDRH, (RL rt, RL rn, RL rm), (0b0101'1010'0000'0000 | s(rm, 6) | s(rn, 3) | s(rt, 0)))
+        OP16(LDRH, (RL rt, RL rn, RL rm), (0b0101'1010'0000'0000 | s(rm, 6) | s(rn, 3) | sw(rt, 0)))
 
-        OP16(LDRSB, (RL rt, RL rn, RL rm), (0b0101'0110'0000'0000 | s(rt, 0) | s(rn, 3) | s(rm, 6)))
+        OP16(LDRSB, (RL rt, RL rn, RL rm), (0b0101'0110'0000'0000 | sw(rt, 0) | s(rn, 3) | s(rm, 6)))
 
-        OP16(LDRSH, (RL rt, RL rn, RL rm), (0b0101'1110'0000'0000 | s(rt, 0) | s(rn, 3) | s(rm, 6)))
+        OP16(LDRSH, (RL rt, RL rn, RL rm), (0b0101'1110'0000'0000 | sw(rt, 0) | s(rn, 3) | s(rm, 6)))
 
         void MODS(RL rd, I8 imm){
             if(!imm.value){
@@ -663,39 +697,39 @@ namespace cg {
             }
         }
 
-        OP16(LSLS, (RL rd, RL rm, Imm<5, 0> imm), (0b0000'0000'0000'0000 | s(rd, 0) | s(rm, 3) | s(imm, 6)))
+        OP16(LSLS, (RL rd, RL rm, Imm<5, 0> imm), (0b0000'0000'0000'0000 | sw(rd, 0) | s(rm, 3) | s(imm, 6)))
 
         void LSLS(RL rd, I8 imm){
             LSLS(rd, rd, imm);
         }
 
-        OP16(LSLS, (RL rdn, RL rm), (0b0100'0000'1000'0000 | s(rm, 3) | s(rdn, 0)))
+        OP16(LSLS, (RL rdn, RL rm), (0b0100'0000'1000'0000 | s(rm, 3) | sw(rdn, 0)))
 
-        OP16(LSRS, (RL rd, RL rm, Imm<5, 0> imm), (0b0000'1000'0000'0000 | s(rd, 0) | s(rm, 3) | s(imm, 6)))
+        OP16(LSRS, (RL rd, RL rm, Imm<5, 0> imm), (0b0000'1000'0000'0000 | sw(rd, 0) | s(rm, 3) | s(imm, 6)))
 
         void LSRS(RL rd, I8 imm){
             LSRS(rd, rd, imm);
         }
 
-        OP16(LSRS, (RL rdn, RL rm), (0b0100'0000'1100'0000 | s(rdn, 0) | s(rm, 3)))
+        OP16(LSRS, (RL rdn, RL rm), (0b0100'0000'1100'0000 | sw(rdn, 0) | s(rm, 3)))
 
-        OP16(MOVS, (RL rd, I8 imm), (0b0010'0000'0000'0000 | s(rd, 8) | s(imm, 0)))
+        OP16(MOVS, (RL rd, I8 imm), (0b0010'0000'0000'0000 | sw(rd, 8) | s(imm, 0)))
 
-        OP16(MOV, (RX rd, RX rm), (0b0100'0110'0000'0000 | s(rm, 3) | s(rd, 7, 0)))
+        OP16(MOV, (RX rd, RX rm), (0b0100'0110'0000'0000 | sw(rm, 3) | s(rd, 7, 0)))
 
-        OP16(MOVS, (RL rd, RL rm), (s(rm, 3) | s(rd, 0)))
+        OP16(MOVS, (RL rd, RL rm), (s(rm, 3) | sw(rd, 0)))
 
-        OP32(MRS, (RX rd, RSYS sys), (0b1111'0011'1110'1111'1000'0000'0000'0000 | s(rd, 8) | s(sys, 0)))
+        OP32(MRS, (RX rd, RSYS sys), (0b1111'0011'1110'1111'1000'0000'0000'0000 | sw(rd, 8) | s(sys, 0)))
 
-        OP32(MSR, (RSYS sys, RX rd), (0b1111'0011'1000'0000'1000'1000'0000'0000 | s(rd, 16) | s(sys, 0)))
+        OP32(MSR, (RSYS sys, RX rd), (0b1111'0011'1000'0000'1000'1000'0000'0000 | sw(rd, 16) | s(sys, 0)))
 
-        OP16(MULS, (RL rdm, RL rn), (0b0100'0011'0100'0000 | s(rn, 3) | s(rdm, 0)))
+        OP16(MULS, (RL rdm, RL rn), (0b0100'0011'0100'0000 | s(rn, 3) | sw(rdm, 0)))
 
-        OP16(MVNS, (RL rd, RL rm), (0b0100'0011'1100'0000 | s(rm, 3) | s(rd, 0)))
+        OP16(MVNS, (RL rd, RL rm), (0b0100'0011'1100'0000 | s(rm, 3) | sw(rd, 0)))
 
         OP16(NOP, (), 0b1011111100000000)
 
-        OP16(ORRS, (RL rdn, RL rm), (0b0100'0011'0000'0000 | s(rdn, 0) | s(rm, 3)))
+        OP16(ORRS, (RL rdn, RL rm), (0b0100'0011'0000'0000 | sw(rdn, 0) | s(rm, 3)))
 
         template<typename ... Arg>
         OP16(POP, (Arg ... arg), (0b1011'1100'0000'0000 | (... | (1 << (arg.value == 15 ? 8 : arg.value)))))
@@ -707,17 +741,17 @@ namespace cg {
 
         OP16(PUSH, (u32 map), (0b1011'0100'0000'0000 | map))
 
-        OP16(REV, (RL rd, RL rm), (0b1011'1010'0000'0000 | s(rm, 3) | s(rd, 0)))
+        OP16(REV, (RL rd, RL rm), (0b1011'1010'0000'0000 | s(rm, 3) | sw(rd, 0)))
 
-        OP16(REV16, (RL rd, RL rm), (0b1011'1010'0100'0000 | s(rm, 3) | s(rd, 0)))
+        OP16(REV16, (RL rd, RL rm), (0b1011'1010'0100'0000 | s(rm, 3) | sw(rd, 0)))
 
-        OP16(REVSH, (RL rd, RL rm), (0b1011'1010'1100'0000 | s(rm, 3) | s(rd, 0)))
+        OP16(REVSH, (RL rd, RL rm), (0b1011'1010'1100'0000 | s(rm, 3) | sw(rd, 0)))
 
-        OP16(RORS, (RL rdn, RL rm), (0b0100'0001'1100'0000 | s(rm, 3) | s(rdn, 0)))
+        OP16(RORS, (RL rdn, RL rm), (0b0100'0001'1100'0000 | s(rm, 3) | sw(rdn, 0)))
 
-        OP16(RSBS, (RL rd, RL rn), (0b0100'0010'0100'0000 | s(rn, 3) | s(rd, 0)))
+        OP16(RSBS, (RL rd, RL rn), (0b0100'0010'0100'0000 | s(rn, 3) | sw(rd, 0)))
 
-        OP16(SBCS, (RL rdn, RL rm), (0b0100'0001'1000'0000 | s(rm, 3) | s(rdn, 0)))
+        OP16(SBCS, (RL rdn, RL rm), (0b0100'0001'1000'0000 | s(rm, 3) | sw(rdn, 0)))
 
         template<typename ... Arg>
         OP16(STMIA, (RL rn, Arg ... arg), (0b1100'0000'0000'0000 | s(rn, 8) | (... | (1 << arg.value))))
@@ -736,11 +770,11 @@ namespace cg {
 
         OP16(STRH, (RL rt, RL rn, RL rm), (0b0101'0010'0000'0000 | s(rm, 6) | s(rn, 3) | s(rt, 0)))
 
-        OP16(SUBS, (RL rd, RL rn, I3 imm), (0b0001'1110'0000'0000 | s(imm, 6) | s(rn, 3) | s(rd, 0)))
+        OP16(SUBS, (RL rd, RL rn, I3 imm), (0b0001'1110'0000'0000 | s(imm, 6) | s(rn, 3) | sw(rd, 0)))
 
-        OP16(SUBS, (RL rdn, I8 imm), (0b0011'1000'0000'0000 | s(rdn, 8) | s(imm, 0)))
+        OP16(SUBS, (RL rdn, I8 imm), (0b0011'1000'0000'0000 | sw(rdn, 8) | s(imm, 0)))
 
-        OP16(SUBS, (RL rd, RL rn, RL rm), (0b0001'1010'0000'0000 | s(rm, 6) | s(rn, 3) | s(rd, 0)))
+        OP16(SUBS, (RL rd, RL rn, RL rm), (0b0001'1010'0000'0000 | s(rm, 6) | s(rn, 3) | sw(rd, 0)))
 
         void SUBS(RL rnd, RL rm){
             SUBS(rnd, rnd, rm);
@@ -750,17 +784,17 @@ namespace cg {
 
         OP16(SVC, (I8 imm), (0b1101'1111'0000'0000 | s(imm, 0)))
 
-        OP16(SXTB, (RL rd, RL rm), (0b1011'0010'0100'0000 | s(rm, 3) | s(rd, 0)))
+        OP16(SXTB, (RL rd, RL rm), (0b1011'0010'0100'0000 | s(rm, 3) | sw(rd, 0)))
 
-        OP16(SXTH, (RL rd, RL rm), (0b1011'0010'0000'0000 | s(rm, 3) | s(rd, 0)))
+        OP16(SXTH, (RL rd, RL rm), (0b1011'0010'0000'0000 | s(rm, 3) | sw(rd, 0)))
 
         OP16(TST, (RL rn, RL rm), (0b0100'0010'0000'0000 | s(rm, 3) | s(rn, 0)))
 
         OP16(UDF, (I8 imm), (0b1101'1110'0000'0000 | s(imm, 0)))
 
-        OP16(UXTB, (RL rd, RL rm), (0b1011'0010'1100'0000 | s(rm, 3) | s(rd, 0)))
+        OP16(UXTB, (RL rd, RL rm), (0b1011'0010'1100'0000 | s(rm, 3) | sw(rd, 0)))
 
-        OP16(UXTH, (RL rd, RL rm), (0b1011'0010'1000'0000 | s(rm, 3) | s(rd, 0)))
+        OP16(UXTH, (RL rd, RL rm), (0b1011'0010'1000'0000 | s(rm, 3) | sw(rd, 0)))
 
 #undef OP32
 #undef OP32L

@@ -57,6 +57,13 @@ namespace pines {
         }
     };
 
+    inline void deleteArrays(){
+        for(ArrayHeader array(arrays); array; ++array){
+            delete[] (array.data - 1);
+        }
+        arrays = 0;
+    }
+
     inline void gc(u32 **stackBottom, u32 **stackTop, u32 **globals, u32 globalCount){
         u32 markCount = 0;
 
@@ -163,7 +170,7 @@ namespace pines {
         cg::BufferWriter<2048> writer;
         /* */
         cg::CodeGen<decltype(writer)> cg;
-        ia::InfiniteArray<Sym, 8> symTable;
+        ia::InfiniteArray<Sym, 32> symTable;
         ResTable& resTable;
         Pines<decltype(cg), decltype(symTable)> pines;
         bool wasInit = false;
@@ -173,7 +180,7 @@ namespace pines {
             tok(file),
             writer /* * / ("pine.bin"), /*/ (reinterpret_cast<void*>(codeSection)) /* */,
             cg(writer),
-            symTable("symbols.tmp"),
+            symTable("pines/symbols.tmp"),
             resTable(resTable),
             pines(tok, cg, symTable, resTable, dataSection)
             {
@@ -249,6 +256,11 @@ namespace pines {
             //     id++;
             // }
 
+            u32 size = cg.tell();
+            if(size >= 2048){
+                LOG("PROGMEM OVERFLOWED BY ", size - 2048, " BYTES\n");
+                return false;
+            }
 
             u32 id = 0, len = 0;
             for(auto &sym : pines.symbols()){

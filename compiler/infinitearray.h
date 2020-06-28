@@ -85,6 +85,21 @@ namespace ia {
             return size();
         }
 
+        template<typename Func>
+        u32 find(Func predicate){
+            for(u32 i=0; i<cacheLineCount; ++i){
+                if(predicate( cache[i].data, cache[i].offset ))
+                    return cache[i].offset;
+            }
+            u32 i=0;
+            for(auto &tmp : *this){
+                if(predicate(tmp, i))
+                    return i;
+                i++;
+            }
+            return end();
+        }
+
         bool empty(){
             return count == 0;
         }

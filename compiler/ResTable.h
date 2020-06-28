@@ -12,7 +12,7 @@ namespace pines {
 
     public:
         ResTable(u32 maxResCount) : capacity(maxResCount) {
-            file.openRW("resources.tmp", true, false);
+            file.openRW("pines/resources.tmp", true, false);
         }
 
         void reset(){

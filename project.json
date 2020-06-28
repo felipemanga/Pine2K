@@ -39,6 +39,7 @@
 			"-Os"
 		],
 		"Pokitto": [
+			"-D_OSCT=2",
 			"-DPROJ_FPS=60",
 			"-I${projectPath}",
 			"-DPOKITTO",
@@ -224,6 +225,7 @@
 			"-ggdb"
 		],
 		"Pokitto": [
+			"-D_OSCT=2",
 			"-Wl,--gc-sections",
 			"-Wl,-n",
 			"--specs=nano.specs",
@@ -281,6 +283,12 @@
 	},
 	"target": "Pokitto",
 	"pipelines": {
+		"Pine": [
+			"compile-cpp",
+			"compile-ld",
+			"compile-bin",
+			"make-img"
+		],
 		"Pokitto": [
 			"compile-cpp",
 			"compile-ld",
@@ -405,6 +413,4104 @@
 			"sdcard": false
 		},
 		"/src.pines~": {
+			"sdcard": false
+		},
+		"/compiler/pines_flymake.h": {
+			"sdcard": false
+		},
+		"/main_flymake.cpp": {
+			"sdcard": false
+		},
+		"/compile_flags.txt": {
+			"sdcard": false
+		},
+		"/compiler/SimplePine_flymake.h": {
+			"sdcard": false
+		},
+		"/rawpine.asm~": {
+			"sdcard": false
+		},
+		"/compiler/infinitearray_flymake.h": {
+			"sdcard": false
+		},
+		"/#src.pines#": {
+			"sdcard": false
+		},
+		"/compiler/tokenizer_flymake.h": {
+			"sdcard": false
+		},
+		"/compiler/#tokenizer.h#": {
+			"sdcard": false
+		},
+		"/compiler/ResTable_flymake.h": {
+			"sdcard": false
+		},
+		"/compiler/#ResTable.h#": {
+			"sdcard": false
+		},
+		"/compiler/ResTable.h": {
+			"sdcard": false
+		},
+		"/compiler/codegen_flymake.h": {
+			"sdcard": false
+		},
+		"/compiler/#pinesUtils.h#": {
+			"sdcard": false
+		},
+		"/compiler/pinesUtils.h": {
+			"sdcard": false
+		},
+		"/compiler/pinesUtils.h~": {
+			"sdcard": false
+		},
+		"/compiler/pinesUtils_flymake.h": {
+			"sdcard": false
+		},
+		"/compiler/ResTable.h~": {
+			"sdcard": false
+		},
+		"/assets": {
+			"sdcard": false
+		},
+		"/scripts": {
+			"sdcard": false
+		},
+		"/assets/angryEmote.png": {
+			"sdcard": false
+		},
+		"/assets/blankEmoteMid.png": {
+			"sdcard": false
+		},
+		"/assets/boredEmote.png": {
+			"sdcard": false
+		},
+		"/assets/confusedEmote.png": {
+			"sdcard": false
+		},
+		"/assets/dohEmote.png": {
+			"sdcard": false
+		},
+		"/assets/happyEmote.png": {
+			"sdcard": false
+		},
+		"/assets/neutralEmote.png": {
+			"sdcard": false
+		},
+		"/assets/sadEmote.png": {
+			"sdcard": false
+		},
+		"/assets/talkingEmote.png": {
+			"sdcard": false
+		},
+		"/assets/talkingEmote2.png": {
+			"sdcard": false
+		},
+		"/assets/veryHappyEmote.png": {
+			"sdcard": false
+		},
+		"/assets/worriedEmote.png": {
+			"sdcard": false
+		},
+		"/assets/underworld1.png": {
+			"sdcard": false
+		},
+		"/assets/underworld2.png": {
+			"sdcard": false
+		},
+		"/assets/underworld3.png": {
+			"sdcard": false
+		},
+		"/assets/underworld4.png": {
+			"sdcard": false
+		},
+		"/assets/underworld5.png": {
+			"sdcard": false
+		},
+		"/assets/underworld6.png": {
+			"sdcard": false
+		},
+		"/assets/underworld7.png": {
+			"sdcard": false
+		},
+		"/assets/underworld8.png": {
+			"sdcard": false
+		},
+		"/assets/underworld9.png": {
+			"sdcard": false
+		},
+		"/assets/underworld10.png": {
+			"sdcard": false
+		},
+		"/assets/underworld11.png": {
+			"sdcard": false
+		},
+		"/assets/underworld12.png": {
+			"sdcard": false
+		},
+		"/assets/underworld13.png": {
+			"sdcard": false
+		},
+		"/assets/underworld14.png": {
+			"sdcard": false
+		},
+		"/assets/underworld15.png": {
+			"sdcard": false
+		},
+		"/assets/underworld16.png": {
+			"sdcard": false
+		},
+		"/assets/underworld17.png": {
+			"sdcard": false
+		},
+		"/assets/underworld18.png": {
+			"sdcard": false
+		},
+		"/assets/underworld19.png": {
+			"sdcard": false
+		},
+		"/assets/underworld20.png": {
+			"sdcard": false
+		},
+		"/assets/underworld21.png": {
+			"sdcard": false
+		},
+		"/assets/underworld22.png": {
+			"sdcard": false
+		},
+		"/assets/underworld23.png": {
+			"sdcard": false
+		},
+		"/assets/underworld24.png": {
+			"sdcard": false
+		},
+		"/assets/underworld25.png": {
+			"sdcard": false
+		},
+		"/assets/underworld26.png": {
+			"sdcard": false
+		},
+		"/assets/underworld27.png": {
+			"sdcard": false
+		},
+		"/assets/underworld28.png": {
+			"sdcard": false
+		},
+		"/assets/underworld29.png": {
+			"sdcard": false
+		},
+		"/assets/underworld30.png": {
+			"sdcard": false
+		},
+		"/assets/underworld31.png": {
+			"sdcard": false
+		},
+		"/assets/underworld32.png": {
+			"sdcard": false
+		},
+		"/assets/underworld33.png": {
+			"sdcard": false
+		},
+		"/assets/underworld34.png": {
+			"sdcard": false
+		},
+		"/assets/underworld35.png": {
+			"sdcard": false
+		},
+		"/assets/underworld36.png": {
+			"sdcard": false
+		},
+		"/assets/underworld37.png": {
+			"sdcard": false
+		},
+		"/assets/underworld38.png": {
+			"sdcard": false
+		},
+		"/assets/underworld39.png": {
+			"sdcard": false
+		},
+		"/assets/underworld40.png": {
+			"sdcard": false
+		},
+		"/assets/underworld41.png": {
+			"sdcard": false
+		},
+		"/assets/underworld42.png": {
+			"sdcard": false
+		},
+		"/assets/underworld43.png": {
+			"sdcard": false
+		},
+		"/assets/underworld44.png": {
+			"sdcard": false
+		},
+		"/assets/underworld45.png": {
+			"sdcard": false
+		},
+		"/assets/underworld46.png": {
+			"sdcard": false
+		},
+		"/assets/underworld47.png": {
+			"sdcard": false
+		},
+		"/assets/underworld48.png": {
+			"sdcard": false
+		},
+		"/assets/underworld49.png": {
+			"sdcard": false
+		},
+		"/assets/underworld50.png": {
+			"sdcard": false
+		},
+		"/assets/underworld51.png": {
+			"sdcard": false
+		},
+		"/assets/underworld52.png": {
+			"sdcard": false
+		},
+		"/assets/underworld53.png": {
+			"sdcard": false
+		},
+		"/assets/underworld54.png": {
+			"sdcard": false
+		},
+		"/assets/underworld55.png": {
+			"sdcard": false
+		},
+		"/assets/underworld56.png": {
+			"sdcard": false
+		},
+		"/assets/underworld57.png": {
+			"sdcard": false
+		},
+		"/assets/underworld58.png": {
+			"sdcard": false
+		},
+		"/assets/underworld59.png": {
+			"sdcard": false
+		},
+		"/assets/underworld60.png": {
+			"sdcard": false
+		},
+		"/assets/underworld61.png": {
+			"sdcard": false
+		},
+		"/assets/underworld62.png": {
+			"sdcard": false
+		},
+		"/assets/underworld63.png": {
+			"sdcard": false
+		},
+		"/assets/underworld64.png": {
+			"sdcard": false
+		},
+		"/assets/underworld65.png": {
+			"sdcard": false
+		},
+		"/assets/underworld66.png": {
+			"sdcard": false
+		},
+		"/assets/underworld67.png": {
+			"sdcard": false
+		},
+		"/assets/underworld68.png": {
+			"sdcard": false
+		},
+		"/assets/underworld69.png": {
+			"sdcard": false
+		},
+		"/assets/underworld70.png": {
+			"sdcard": false
+		},
+		"/assets/underworld71.png": {
+			"sdcard": false
+		},
+		"/assets/underworld72.png": {
+			"sdcard": false
+		},
+		"/assets/underworld73.png": {
+			"sdcard": false
+		},
+		"/assets/underworld74.png": {
+			"sdcard": false
+		},
+		"/assets/underworld75.png": {
+			"sdcard": false
+		},
+		"/assets/underworld76.png": {
+			"sdcard": false
+		},
+		"/assets/underworld77.png": {
+			"sdcard": false
+		},
+		"/assets/underworld78.png": {
+			"sdcard": false
+		},
+		"/assets/underworld79.png": {
+			"sdcard": false
+		},
+		"/assets/underworld80.png": {
+			"sdcard": false
+		},
+		"/assets/underworld81.png": {
+			"sdcard": false
+		},
+		"/assets/underworld82.png": {
+			"sdcard": false
+		},
+		"/assets/underworld83.png": {
+			"sdcard": false
+		},
+		"/assets/underworld84.png": {
+			"sdcard": false
+		},
+		"/assets/underworld85.png": {
+			"sdcard": false
+		},
+		"/assets/underworld86.png": {
+			"sdcard": false
+		},
+		"/assets/underworld87.png": {
+			"sdcard": false
+		},
+		"/assets/underworld88.png": {
+			"sdcard": false
+		},
+		"/assets/underworld89.png": {
+			"sdcard": false
+		},
+		"/assets/underworld90.png": {
+			"sdcard": false
+		},
+		"/assets/underworld91.png": {
+			"sdcard": false
+		},
+		"/assets/underworld92.png": {
+			"sdcard": false
+		},
+		"/assets/underworld93.png": {
+			"sdcard": false
+		},
+		"/assets/underworld94.png": {
+			"sdcard": false
+		},
+		"/assets/underworld95.png": {
+			"sdcard": false
+		},
+		"/assets/underworld96.png": {
+			"sdcard": false
+		},
+		"/assets/underworld97.png": {
+			"sdcard": false
+		},
+		"/assets/underworld98.png": {
+			"sdcard": false
+		},
+		"/assets/underworld99.png": {
+			"sdcard": false
+		},
+		"/assets/underworld100.png": {
+			"sdcard": false
+		},
+		"/assets/underworld101.png": {
+			"sdcard": false
+		},
+		"/assets/underworld102.png": {
+			"sdcard": false
+		},
+		"/assets/underworld103.png": {
+			"sdcard": false
+		},
+		"/assets/underworld104.png": {
+			"sdcard": false
+		},
+		"/assets/underworld105.png": {
+			"sdcard": false
+		},
+		"/assets/underworld106.png": {
+			"sdcard": false
+		},
+		"/assets/underworld107.png": {
+			"sdcard": false
+		},
+		"/assets/underworld108.png": {
+			"sdcard": false
+		},
+		"/assets/underworld109.png": {
+			"sdcard": false
+		},
+		"/assets/underworld110.png": {
+			"sdcard": false
+		},
+		"/assets/underworld111.png": {
+			"sdcard": false
+		},
+		"/assets/underworld112.png": {
+			"sdcard": false
+		},
+		"/assets/underworld113.png": {
+			"sdcard": false
+		},
+		"/assets/underworld114.png": {
+			"sdcard": false
+		},
+		"/assets/underworld115.png": {
+			"sdcard": false
+		},
+		"/assets/underworld116.png": {
+			"sdcard": false
+		},
+		"/assets/underworld117.png": {
+			"sdcard": false
+		},
+		"/assets/underworld118.png": {
+			"sdcard": false
+		},
+		"/assets/underworld119.png": {
+			"sdcard": false
+		},
+		"/assets/underworld120.png": {
+			"sdcard": false
+		},
+		"/assets/underworld121.png": {
+			"sdcard": false
+		},
+		"/assets/underworld122.png": {
+			"sdcard": false
+		},
+		"/assets/underworld123.png": {
+			"sdcard": false
+		},
+		"/assets/underworld124.png": {
+			"sdcard": false
+		},
+		"/assets/underworld125.png": {
+			"sdcard": false
+		},
+		"/assets/underworld126.png": {
+			"sdcard": false
+		},
+		"/assets/underworld127.png": {
+			"sdcard": false
+		},
+		"/assets/underworld128.png": {
+			"sdcard": false
+		},
+		"/assets/underworld129.png": {
+			"sdcard": false
+		},
+		"/assets/underworld130.png": {
+			"sdcard": false
+		},
+		"/assets/underworld131.png": {
+			"sdcard": false
+		},
+		"/assets/underworld132.png": {
+			"sdcard": false
+		},
+		"/assets/underworld133.png": {
+			"sdcard": false
+		},
+		"/assets/underworld134.png": {
+			"sdcard": false
+		},
+		"/assets/underworld135.png": {
+			"sdcard": false
+		},
+		"/assets/underworld136.png": {
+			"sdcard": false
+		},
+		"/assets/underworld137.png": {
+			"sdcard": false
+		},
+		"/assets/underworld138.png": {
+			"sdcard": false
+		},
+		"/assets/underworld139.png": {
+			"sdcard": false
+		},
+		"/assets/underworld140.png": {
+			"sdcard": false
+		},
+		"/assets/underworld141.png": {
+			"sdcard": false
+		},
+		"/assets/underworld142.png": {
+			"sdcard": false
+		},
+		"/assets/underworld143.png": {
+			"sdcard": false
+		},
+		"/assets/underworld144.png": {
+			"sdcard": false
+		},
+		"/assets/underworld145.png": {
+			"sdcard": false
+		},
+		"/assets/underworld146.png": {
+			"sdcard": false
+		},
+		"/assets/underworld147.png": {
+			"sdcard": false
+		},
+		"/assets/underworld148.png": {
+			"sdcard": false
+		},
+		"/assets/underworld149.png": {
+			"sdcard": false
+		},
+		"/assets/underworld150.png": {
+			"sdcard": false
+		},
+		"/assets/underworld151.png": {
+			"sdcard": false
+		},
+		"/assets/underworld152.png": {
+			"sdcard": false
+		},
+		"/assets/underworld153.png": {
+			"sdcard": false
+		},
+		"/assets/underworld154.png": {
+			"sdcard": false
+		},
+		"/assets/underworld155.png": {
+			"sdcard": false
+		},
+		"/assets/underworld156.png": {
+			"sdcard": false
+		},
+		"/assets/underworld157.png": {
+			"sdcard": false
+		},
+		"/assets/underworld158.png": {
+			"sdcard": false
+		},
+		"/assets/underworld159.png": {
+			"sdcard": false
+		},
+		"/assets/underworld160.png": {
+			"sdcard": false
+		},
+		"/assets/underworld161.png": {
+			"sdcard": false
+		},
+		"/assets/underworld162.png": {
+			"sdcard": false
+		},
+		"/assets/underworld163.png": {
+			"sdcard": false
+		},
+		"/assets/underworld164.png": {
+			"sdcard": false
+		},
+		"/assets/underworld165.png": {
+			"sdcard": false
+		},
+		"/assets/underworld166.png": {
+			"sdcard": false
+		},
+		"/assets/underworld167.png": {
+			"sdcard": false
+		},
+		"/assets/underworld168.png": {
+			"sdcard": false
+		},
+		"/assets/underworld169.png": {
+			"sdcard": false
+		},
+		"/assets/underworld170.png": {
+			"sdcard": false
+		},
+		"/assets/underworld171.png": {
+			"sdcard": false
+		},
+		"/assets/underworld172.png": {
+			"sdcard": false
+		},
+		"/assets/underworld173.png": {
+			"sdcard": false
+		},
+		"/assets/underworld174.png": {
+			"sdcard": false
+		},
+		"/assets/underworld175.png": {
+			"sdcard": false
+		},
+		"/assets/underworld176.png": {
+			"sdcard": false
+		},
+		"/assets/underworld177.png": {
+			"sdcard": false
+		},
+		"/assets/underworld178.png": {
+			"sdcard": false
+		},
+		"/assets/underworld179.png": {
+			"sdcard": false
+		},
+		"/assets/underworld180.png": {
+			"sdcard": false
+		},
+		"/assets/underworld181.png": {
+			"sdcard": false
+		},
+		"/assets/underworld182.png": {
+			"sdcard": false
+		},
+		"/assets/underworld183.png": {
+			"sdcard": false
+		},
+		"/assets/underworld184.png": {
+			"sdcard": false
+		},
+		"/assets/underworld185.png": {
+			"sdcard": false
+		},
+		"/assets/underworld186.png": {
+			"sdcard": false
+		},
+		"/assets/underworld187.png": {
+			"sdcard": false
+		},
+		"/assets/underworld188.png": {
+			"sdcard": false
+		},
+		"/assets/underworld189.png": {
+			"sdcard": false
+		},
+		"/assets/underworld190.png": {
+			"sdcard": false
+		},
+		"/assets/underworld191.png": {
+			"sdcard": false
+		},
+		"/assets/underworld192.png": {
+			"sdcard": false
+		},
+		"/assets/underworld193.png": {
+			"sdcard": false
+		},
+		"/assets/underworld194.png": {
+			"sdcard": false
+		},
+		"/assets/underworld195.png": {
+			"sdcard": false
+		},
+		"/assets/underworld196.png": {
+			"sdcard": false
+		},
+		"/assets/underworld197.png": {
+			"sdcard": false
+		},
+		"/assets/underworld198.png": {
+			"sdcard": false
+		},
+		"/assets/underworld199.png": {
+			"sdcard": false
+		},
+		"/assets/underworld200.png": {
+			"sdcard": false
+		},
+		"/assets/underworld201.png": {
+			"sdcard": false
+		},
+		"/assets/underworld202.png": {
+			"sdcard": false
+		},
+		"/assets/underworld203.png": {
+			"sdcard": false
+		},
+		"/assets/underworld204.png": {
+			"sdcard": false
+		},
+		"/assets/underworld205.png": {
+			"sdcard": false
+		},
+		"/assets/underworld206.png": {
+			"sdcard": false
+		},
+		"/assets/underworld207.png": {
+			"sdcard": false
+		},
+		"/assets/underworld208.png": {
+			"sdcard": false
+		},
+		"/assets/underworld209.png": {
+			"sdcard": false
+		},
+		"/assets/underworld210.png": {
+			"sdcard": false
+		},
+		"/assets/underworld211.png": {
+			"sdcard": false
+		},
+		"/assets/underworld212.png": {
+			"sdcard": false
+		},
+		"/assets/underworld213.png": {
+			"sdcard": false
+		},
+		"/assets/underworld214.png": {
+			"sdcard": false
+		},
+		"/assets/underworld215.png": {
+			"sdcard": false
+		},
+		"/assets/underworld216.png": {
+			"sdcard": false
+		},
+		"/assets/underworld217.png": {
+			"sdcard": false
+		},
+		"/assets/underworld218.png": {
+			"sdcard": false
+		},
+		"/assets/underworld219.png": {
+			"sdcard": false
+		},
+		"/assets/underworld220.png": {
+			"sdcard": false
+		},
+		"/assets/underworld221.png": {
+			"sdcard": false
+		},
+		"/assets/underworld222.png": {
+			"sdcard": false
+		},
+		"/assets/underworld223.png": {
+			"sdcard": false
+		},
+		"/assets/underworld224.png": {
+			"sdcard": false
+		},
+		"/assets/underworld225.png": {
+			"sdcard": false
+		},
+		"/assets/underworld226.png": {
+			"sdcard": false
+		},
+		"/assets/underworld227.png": {
+			"sdcard": false
+		},
+		"/assets/underworld228.png": {
+			"sdcard": false
+		},
+		"/assets/underworld229.png": {
+			"sdcard": false
+		},
+		"/assets/underworld230.png": {
+			"sdcard": false
+		},
+		"/assets/underworld231.png": {
+			"sdcard": false
+		},
+		"/assets/underworld232.png": {
+			"sdcard": false
+		},
+		"/assets/underworld233.png": {
+			"sdcard": false
+		},
+		"/assets/underworld234.png": {
+			"sdcard": false
+		},
+		"/assets/underworld235.png": {
+			"sdcard": false
+		},
+		"/assets/underworld236.png": {
+			"sdcard": false
+		},
+		"/assets/underworld237.png": {
+			"sdcard": false
+		},
+		"/assets/underworld238.png": {
+			"sdcard": false
+		},
+		"/assets/underworld239.png": {
+			"sdcard": false
+		},
+		"/assets/underworld240.png": {
+			"sdcard": false
+		},
+		"/assets/underworld241.png": {
+			"sdcard": false
+		},
+		"/assets/underworld242.png": {
+			"sdcard": false
+		},
+		"/assets/underworld243.png": {
+			"sdcard": false
+		},
+		"/assets/underworld244.png": {
+			"sdcard": false
+		},
+		"/assets/underworld245.png": {
+			"sdcard": false
+		},
+		"/assets/underworld246.png": {
+			"sdcard": false
+		},
+		"/assets/underworld247.png": {
+			"sdcard": false
+		},
+		"/assets/underworld248.png": {
+			"sdcard": false
+		},
+		"/assets/underworld249.png": {
+			"sdcard": false
+		},
+		"/assets/underworld250.png": {
+			"sdcard": false
+		},
+		"/assets/underworld251.png": {
+			"sdcard": false
+		},
+		"/assets/underworld252.png": {
+			"sdcard": false
+		},
+		"/assets/underworld253.png": {
+			"sdcard": false
+		},
+		"/assets/underworld254.png": {
+			"sdcard": false
+		},
+		"/assets/underworld255.png": {
+			"sdcard": false
+		},
+		"/assets/underworld256.png": {
+			"sdcard": false
+		},
+		"/assets/underworld257.png": {
+			"sdcard": false
+		},
+		"/assets/underworld258.png": {
+			"sdcard": false
+		},
+		"/assets/underworld259.png": {
+			"sdcard": false
+		},
+		"/assets/underworld260.png": {
+			"sdcard": false
+		},
+		"/assets/tiny1.png": {
+			"sdcard": false
+		},
+		"/assets/tiny2.png": {
+			"sdcard": false
+		},
+		"/assets/tiny3.png": {
+			"sdcard": false
+		},
+		"/assets/tiny4.png": {
+			"sdcard": false
+		},
+		"/assets/tiny5.png": {
+			"sdcard": false
+		},
+		"/assets/tiny6.png": {
+			"sdcard": false
+		},
+		"/assets/tiny7.png": {
+			"sdcard": false
+		},
+		"/assets/tiny8.png": {
+			"sdcard": false
+		},
+		"/assets/tiny9.png": {
+			"sdcard": false
+		},
+		"/assets/tiny10.png": {
+			"sdcard": false
+		},
+		"/assets/tiny11.png": {
+			"sdcard": false
+		},
+		"/assets/tiny12.png": {
+			"sdcard": false
+		},
+		"/assets/tiny13.png": {
+			"sdcard": false
+		},
+		"/assets/tiny14.png": {
+			"sdcard": false
+		},
+		"/assets/tiny15.png": {
+			"sdcard": false
+		},
+		"/assets/tiny16.png": {
+			"sdcard": false
+		},
+		"/assets/tiny17.png": {
+			"sdcard": false
+		},
+		"/assets/tiny18.png": {
+			"sdcard": false
+		},
+		"/assets/tiny19.png": {
+			"sdcard": false
+		},
+		"/assets/tiny20.png": {
+			"sdcard": false
+		},
+		"/assets/tiny21.png": {
+			"sdcard": false
+		},
+		"/assets/tiny22.png": {
+			"sdcard": false
+		},
+		"/assets/tiny23.png": {
+			"sdcard": false
+		},
+		"/assets/tiny24.png": {
+			"sdcard": false
+		},
+		"/assets/tiny25.png": {
+			"sdcard": false
+		},
+		"/assets/tiny26.png": {
+			"sdcard": false
+		},
+		"/assets/tiny27.png": {
+			"sdcard": false
+		},
+		"/assets/tiny28.png": {
+			"sdcard": false
+		},
+		"/assets/tiny29.png": {
+			"sdcard": false
+		},
+		"/assets/tiny30.png": {
+			"sdcard": false
+		},
+		"/assets/tiny31.png": {
+			"sdcard": false
+		},
+		"/assets/tiny32.png": {
+			"sdcard": false
+		},
+		"/assets/tiny33.png": {
+			"sdcard": false
+		},
+		"/assets/tiny34.png": {
+			"sdcard": false
+		},
+		"/assets/tiny35.png": {
+			"sdcard": false
+		},
+		"/assets/tiny36.png": {
+			"sdcard": false
+		},
+		"/assets/tiny37.png": {
+			"sdcard": false
+		},
+		"/assets/tiny38.png": {
+			"sdcard": false
+		},
+		"/assets/tiny39.png": {
+			"sdcard": false
+		},
+		"/assets/tiny40.png": {
+			"sdcard": false
+		},
+		"/assets/tiny41.png": {
+			"sdcard": false
+		},
+		"/assets/tiny42.png": {
+			"sdcard": false
+		},
+		"/assets/tiny43.png": {
+			"sdcard": false
+		},
+		"/assets/tiny44.png": {
+			"sdcard": false
+		},
+		"/assets/tiny45.png": {
+			"sdcard": false
+		},
+		"/assets/tiny46.png": {
+			"sdcard": false
+		},
+		"/assets/tiny47.png": {
+			"sdcard": false
+		},
+		"/scripts/#assets.js#": {
+			"sdcard": false
+		},
+		"/scripts/assets.js": {
+			"sdcard": false
+		},
+		"/scripts/assets.js~": {
+			"sdcard": false
+		},
+		"/assets.bin": {
+			"sdcard": false
+		},
+		"/assets.h": {
+			"sdcard": false
+		},
+		"/assets.h~": {
+			"sdcard": false
+		},
+		"/assets/angryEmote.h": {
+			"sdcard": false
+		},
+		"/assets/blankEmoteMid.h": {
+			"sdcard": false
+		},
+		"/assets/boredEmote.h": {
+			"sdcard": false
+		},
+		"/assets/confusedEmote.h": {
+			"sdcard": false
+		},
+		"/assets/dohEmote.h": {
+			"sdcard": false
+		},
+		"/assets/happyEmote.h": {
+			"sdcard": false
+		},
+		"/assets/neutralEmote.h": {
+			"sdcard": false
+		},
+		"/assets/sadEmote.h": {
+			"sdcard": false
+		},
+		"/assets/talkingEmote.h": {
+			"sdcard": false
+		},
+		"/assets/talkingEmote2.h": {
+			"sdcard": false
+		},
+		"/assets/veryHappyEmote.h": {
+			"sdcard": false
+		},
+		"/assets/worriedEmote.h": {
+			"sdcard": false
+		},
+		"/assets/underworld1.h": {
+			"sdcard": false
+		},
+		"/assets/underworld3.h": {
+			"sdcard": false
+		},
+		"/assets/underworld4.h": {
+			"sdcard": false
+		},
+		"/assets/underworld5.h": {
+			"sdcard": false
+		},
+		"/assets/underworld6.h": {
+			"sdcard": false
+		},
+		"/assets/underworld7.h": {
+			"sdcard": false
+		},
+		"/assets/underworld8.h": {
+			"sdcard": false
+		},
+		"/assets/underworld9.h": {
+			"sdcard": false
+		},
+		"/assets/underworld10.h": {
+			"sdcard": false
+		},
+		"/assets/underworld11.h": {
+			"sdcard": false
+		},
+		"/assets/underworld2.h": {
+			"sdcard": false
+		},
+		"/assets/underworld12.h": {
+			"sdcard": false
+		},
+		"/assets/underworld13.h": {
+			"sdcard": false
+		},
+		"/assets/underworld14.h": {
+			"sdcard": false
+		},
+		"/assets/underworld15.h": {
+			"sdcard": false
+		},
+		"/assets/underworld16.h": {
+			"sdcard": false
+		},
+		"/assets/underworld17.h": {
+			"sdcard": false
+		},
+		"/assets/underworld18.h": {
+			"sdcard": false
+		},
+		"/assets/underworld19.h": {
+			"sdcard": false
+		},
+		"/assets/underworld20.h": {
+			"sdcard": false
+		},
+		"/assets/underworld21.h": {
+			"sdcard": false
+		},
+		"/assets/underworld22.h": {
+			"sdcard": false
+		},
+		"/assets/underworld23.h": {
+			"sdcard": false
+		},
+		"/assets/underworld25.h": {
+			"sdcard": false
+		},
+		"/assets/underworld26.h": {
+			"sdcard": false
+		},
+		"/assets/underworld27.h": {
+			"sdcard": false
+		},
+		"/assets/underworld24.h": {
+			"sdcard": false
+		},
+		"/assets/underworld28.h": {
+			"sdcard": false
+		},
+		"/assets/underworld29.h": {
+			"sdcard": false
+		},
+		"/assets/underworld30.h": {
+			"sdcard": false
+		},
+		"/assets/underworld31.h": {
+			"sdcard": false
+		},
+		"/assets/underworld32.h": {
+			"sdcard": false
+		},
+		"/assets/underworld33.h": {
+			"sdcard": false
+		},
+		"/assets/underworld34.h": {
+			"sdcard": false
+		},
+		"/assets/underworld35.h": {
+			"sdcard": false
+		},
+		"/assets/underworld36.h": {
+			"sdcard": false
+		},
+		"/assets/underworld37.h": {
+			"sdcard": false
+		},
+		"/assets/underworld38.h": {
+			"sdcard": false
+		},
+		"/assets/underworld39.h": {
+			"sdcard": false
+		},
+		"/assets/underworld40.h": {
+			"sdcard": false
+		},
+		"/assets/underworld41.h": {
+			"sdcard": false
+		},
+		"/assets/underworld42.h": {
+			"sdcard": false
+		},
+		"/assets/underworld43.h": {
+			"sdcard": false
+		},
+		"/assets/underworld44.h": {
+			"sdcard": false
+		},
+		"/assets/underworld45.h": {
+			"sdcard": false
+		},
+		"/assets/underworld46.h": {
+			"sdcard": false
+		},
+		"/assets/underworld47.h": {
+			"sdcard": false
+		},
+		"/assets/underworld48.h": {
+			"sdcard": false
+		},
+		"/assets/underworld49.h": {
+			"sdcard": false
+		},
+		"/assets/underworld50.h": {
+			"sdcard": false
+		},
+		"/assets/underworld51.h": {
+			"sdcard": false
+		},
+		"/assets/underworld52.h": {
+			"sdcard": false
+		},
+		"/assets/underworld53.h": {
+			"sdcard": false
+		},
+		"/assets/underworld54.h": {
+			"sdcard": false
+		},
+		"/assets/underworld55.h": {
+			"sdcard": false
+		},
+		"/assets/underworld57.h": {
+			"sdcard": false
+		},
+		"/assets/underworld56.h": {
+			"sdcard": false
+		},
+		"/assets/underworld58.h": {
+			"sdcard": false
+		},
+		"/assets/underworld59.h": {
+			"sdcard": false
+		},
+		"/assets/underworld60.h": {
+			"sdcard": false
+		},
+		"/assets/underworld61.h": {
+			"sdcard": false
+		},
+		"/assets/underworld62.h": {
+			"sdcard": false
+		},
+		"/assets/underworld63.h": {
+			"sdcard": false
+		},
+		"/assets/underworld64.h": {
+			"sdcard": false
+		},
+		"/assets/underworld65.h": {
+			"sdcard": false
+		},
+		"/assets/underworld66.h": {
+			"sdcard": false
+		},
+		"/assets/underworld67.h": {
+			"sdcard": false
+		},
+		"/assets/underworld68.h": {
+			"sdcard": false
+		},
+		"/assets/underworld69.h": {
+			"sdcard": false
+		},
+		"/assets/underworld70.h": {
+			"sdcard": false
+		},
+		"/assets/underworld71.h": {
+			"sdcard": false
+		},
+		"/assets/underworld72.h": {
+			"sdcard": false
+		},
+		"/assets/underworld73.h": {
+			"sdcard": false
+		},
+		"/assets/underworld74.h": {
+			"sdcard": false
+		},
+		"/assets/underworld75.h": {
+			"sdcard": false
+		},
+		"/assets/underworld76.h": {
+			"sdcard": false
+		},
+		"/assets/underworld77.h": {
+			"sdcard": false
+		},
+		"/assets/underworld78.h": {
+			"sdcard": false
+		},
+		"/assets/underworld79.h": {
+			"sdcard": false
+		},
+		"/assets/underworld80.h": {
+			"sdcard": false
+		},
+		"/assets/underworld82.h": {
+			"sdcard": false
+		},
+		"/assets/underworld83.h": {
+			"sdcard": false
+		},
+		"/assets/underworld85.h": {
+			"sdcard": false
+		},
+		"/assets/underworld86.h": {
+			"sdcard": false
+		},
+		"/assets/underworld81.h": {
+			"sdcard": false
+		},
+		"/assets/underworld84.h": {
+			"sdcard": false
+		},
+		"/assets/underworld88.h": {
+			"sdcard": false
+		},
+		"/assets/underworld89.h": {
+			"sdcard": false
+		},
+		"/assets/underworld90.h": {
+			"sdcard": false
+		},
+		"/assets/underworld87.h": {
+			"sdcard": false
+		},
+		"/assets/underworld92.h": {
+			"sdcard": false
+		},
+		"/assets/underworld94.h": {
+			"sdcard": false
+		},
+		"/assets/underworld93.h": {
+			"sdcard": false
+		},
+		"/assets/underworld91.h": {
+			"sdcard": false
+		},
+		"/assets/underworld95.h": {
+			"sdcard": false
+		},
+		"/assets/underworld96.h": {
+			"sdcard": false
+		},
+		"/assets/underworld97.h": {
+			"sdcard": false
+		},
+		"/assets/underworld98.h": {
+			"sdcard": false
+		},
+		"/assets/underworld99.h": {
+			"sdcard": false
+		},
+		"/assets/underworld101.h": {
+			"sdcard": false
+		},
+		"/assets/underworld100.h": {
+			"sdcard": false
+		},
+		"/assets/underworld102.h": {
+			"sdcard": false
+		},
+		"/assets/underworld103.h": {
+			"sdcard": false
+		},
+		"/assets/underworld104.h": {
+			"sdcard": false
+		},
+		"/assets/underworld105.h": {
+			"sdcard": false
+		},
+		"/assets/underworld106.h": {
+			"sdcard": false
+		},
+		"/assets/underworld107.h": {
+			"sdcard": false
+		},
+		"/assets/underworld108.h": {
+			"sdcard": false
+		},
+		"/assets/underworld109.h": {
+			"sdcard": false
+		},
+		"/assets/underworld110.h": {
+			"sdcard": false
+		},
+		"/assets/underworld111.h": {
+			"sdcard": false
+		},
+		"/assets/underworld112.h": {
+			"sdcard": false
+		},
+		"/assets/underworld113.h": {
+			"sdcard": false
+		},
+		"/assets/underworld114.h": {
+			"sdcard": false
+		},
+		"/assets/underworld115.h": {
+			"sdcard": false
+		},
+		"/assets/underworld116.h": {
+			"sdcard": false
+		},
+		"/assets/underworld117.h": {
+			"sdcard": false
+		},
+		"/assets/underworld118.h": {
+			"sdcard": false
+		},
+		"/assets/underworld119.h": {
+			"sdcard": false
+		},
+		"/assets/underworld120.h": {
+			"sdcard": false
+		},
+		"/assets/underworld121.h": {
+			"sdcard": false
+		},
+		"/assets/underworld122.h": {
+			"sdcard": false
+		},
+		"/assets/underworld123.h": {
+			"sdcard": false
+		},
+		"/assets/underworld124.h": {
+			"sdcard": false
+		},
+		"/assets/underworld125.h": {
+			"sdcard": false
+		},
+		"/assets/underworld126.h": {
+			"sdcard": false
+		},
+		"/assets/underworld128.h": {
+			"sdcard": false
+		},
+		"/assets/underworld129.h": {
+			"sdcard": false
+		},
+		"/assets/underworld130.h": {
+			"sdcard": false
+		},
+		"/assets/underworld131.h": {
+			"sdcard": false
+		},
+		"/assets/underworld127.h": {
+			"sdcard": false
+		},
+		"/assets/underworld132.h": {
+			"sdcard": false
+		},
+		"/assets/underworld133.h": {
+			"sdcard": false
+		},
+		"/assets/underworld134.h": {
+			"sdcard": false
+		},
+		"/assets/underworld135.h": {
+			"sdcard": false
+		},
+		"/assets/underworld136.h": {
+			"sdcard": false
+		},
+		"/assets/underworld137.h": {
+			"sdcard": false
+		},
+		"/assets/underworld138.h": {
+			"sdcard": false
+		},
+		"/assets/underworld139.h": {
+			"sdcard": false
+		},
+		"/assets/underworld140.h": {
+			"sdcard": false
+		},
+		"/assets/underworld141.h": {
+			"sdcard": false
+		},
+		"/assets/underworld142.h": {
+			"sdcard": false
+		},
+		"/assets/underworld143.h": {
+			"sdcard": false
+		},
+		"/assets/underworld144.h": {
+			"sdcard": false
+		},
+		"/assets/underworld145.h": {
+			"sdcard": false
+		},
+		"/assets/underworld146.h": {
+			"sdcard": false
+		},
+		"/assets/underworld147.h": {
+			"sdcard": false
+		},
+		"/assets/underworld148.h": {
+			"sdcard": false
+		},
+		"/assets/underworld149.h": {
+			"sdcard": false
+		},
+		"/assets/underworld150.h": {
+			"sdcard": false
+		},
+		"/assets/underworld151.h": {
+			"sdcard": false
+		},
+		"/assets/underworld152.h": {
+			"sdcard": false
+		},
+		"/assets/underworld153.h": {
+			"sdcard": false
+		},
+		"/assets/underworld154.h": {
+			"sdcard": false
+		},
+		"/assets/underworld155.h": {
+			"sdcard": false
+		},
+		"/assets/underworld156.h": {
+			"sdcard": false
+		},
+		"/assets/underworld157.h": {
+			"sdcard": false
+		},
+		"/assets/underworld158.h": {
+			"sdcard": false
+		},
+		"/assets/underworld159.h": {
+			"sdcard": false
+		},
+		"/assets/underworld160.h": {
+			"sdcard": false
+		},
+		"/assets/underworld161.h": {
+			"sdcard": false
+		},
+		"/assets/underworld162.h": {
+			"sdcard": false
+		},
+		"/assets/underworld163.h": {
+			"sdcard": false
+		},
+		"/assets/underworld164.h": {
+			"sdcard": false
+		},
+		"/assets/underworld165.h": {
+			"sdcard": false
+		},
+		"/assets/underworld166.h": {
+			"sdcard": false
+		},
+		"/assets/underworld167.h": {
+			"sdcard": false
+		},
+		"/assets/underworld169.h": {
+			"sdcard": false
+		},
+		"/assets/underworld170.h": {
+			"sdcard": false
+		},
+		"/assets/underworld171.h": {
+			"sdcard": false
+		},
+		"/assets/underworld172.h": {
+			"sdcard": false
+		},
+		"/assets/underworld173.h": {
+			"sdcard": false
+		},
+		"/assets/underworld174.h": {
+			"sdcard": false
+		},
+		"/assets/underworld168.h": {
+			"sdcard": false
+		},
+		"/assets/underworld175.h": {
+			"sdcard": false
+		},
+		"/assets/underworld176.h": {
+			"sdcard": false
+		},
+		"/assets/underworld177.h": {
+			"sdcard": false
+		},
+		"/assets/underworld178.h": {
+			"sdcard": false
+		},
+		"/assets/underworld179.h": {
+			"sdcard": false
+		},
+		"/assets/underworld180.h": {
+			"sdcard": false
+		},
+		"/assets/underworld181.h": {
+			"sdcard": false
+		},
+		"/assets/underworld182.h": {
+			"sdcard": false
+		},
+		"/assets/underworld183.h": {
+			"sdcard": false
+		},
+		"/assets/underworld184.h": {
+			"sdcard": false
+		},
+		"/assets/underworld185.h": {
+			"sdcard": false
+		},
+		"/assets/underworld186.h": {
+			"sdcard": false
+		},
+		"/assets/underworld187.h": {
+			"sdcard": false
+		},
+		"/assets/underworld188.h": {
+			"sdcard": false
+		},
+		"/assets/underworld189.h": {
+			"sdcard": false
+		},
+		"/assets/underworld190.h": {
+			"sdcard": false
+		},
+		"/assets/underworld191.h": {
+			"sdcard": false
+		},
+		"/assets/underworld192.h": {
+			"sdcard": false
+		},
+		"/assets/underworld193.h": {
+			"sdcard": false
+		},
+		"/assets/underworld194.h": {
+			"sdcard": false
+		},
+		"/assets/underworld195.h": {
+			"sdcard": false
+		},
+		"/assets/underworld196.h": {
+			"sdcard": false
+		},
+		"/assets/underworld197.h": {
+			"sdcard": false
+		},
+		"/assets/underworld198.h": {
+			"sdcard": false
+		},
+		"/assets/underworld199.h": {
+			"sdcard": false
+		},
+		"/assets/underworld200.h": {
+			"sdcard": false
+		},
+		"/assets/underworld201.h": {
+			"sdcard": false
+		},
+		"/assets/underworld202.h": {
+			"sdcard": false
+		},
+		"/assets/underworld203.h": {
+			"sdcard": false
+		},
+		"/assets/underworld204.h": {
+			"sdcard": false
+		},
+		"/assets/underworld205.h": {
+			"sdcard": false
+		},
+		"/assets/underworld206.h": {
+			"sdcard": false
+		},
+		"/assets/underworld207.h": {
+			"sdcard": false
+		},
+		"/assets/underworld208.h": {
+			"sdcard": false
+		},
+		"/assets/underworld209.h": {
+			"sdcard": false
+		},
+		"/assets/underworld210.h": {
+			"sdcard": false
+		},
+		"/assets/underworld211.h": {
+			"sdcard": false
+		},
+		"/assets/underworld212.h": {
+			"sdcard": false
+		},
+		"/assets/underworld213.h": {
+			"sdcard": false
+		},
+		"/assets/underworld214.h": {
+			"sdcard": false
+		},
+		"/assets/underworld217.h": {
+			"sdcard": false
+		},
+		"/assets/underworld218.h": {
+			"sdcard": false
+		},
+		"/assets/underworld219.h": {
+			"sdcard": false
+		},
+		"/assets/underworld215.h": {
+			"sdcard": false
+		},
+		"/assets/underworld216.h": {
+			"sdcard": false
+		},
+		"/assets/underworld220.h": {
+			"sdcard": false
+		},
+		"/assets/underworld221.h": {
+			"sdcard": false
+		},
+		"/assets/underworld222.h": {
+			"sdcard": false
+		},
+		"/assets/underworld223.h": {
+			"sdcard": false
+		},
+		"/assets/underworld224.h": {
+			"sdcard": false
+		},
+		"/assets/underworld225.h": {
+			"sdcard": false
+		},
+		"/assets/underworld226.h": {
+			"sdcard": false
+		},
+		"/assets/underworld227.h": {
+			"sdcard": false
+		},
+		"/assets/underworld228.h": {
+			"sdcard": false
+		},
+		"/assets/underworld229.h": {
+			"sdcard": false
+		},
+		"/assets/underworld230.h": {
+			"sdcard": false
+		},
+		"/assets/underworld231.h": {
+			"sdcard": false
+		},
+		"/assets/underworld232.h": {
+			"sdcard": false
+		},
+		"/assets/underworld233.h": {
+			"sdcard": false
+		},
+		"/assets/underworld234.h": {
+			"sdcard": false
+		},
+		"/assets/underworld235.h": {
+			"sdcard": false
+		},
+		"/assets/underworld236.h": {
+			"sdcard": false
+		},
+		"/assets/underworld237.h": {
+			"sdcard": false
+		},
+		"/assets/underworld238.h": {
+			"sdcard": false
+		},
+		"/assets/underworld239.h": {
+			"sdcard": false
+		},
+		"/assets/underworld240.h": {
+			"sdcard": false
+		},
+		"/assets/underworld241.h": {
+			"sdcard": false
+		},
+		"/assets/underworld242.h": {
+			"sdcard": false
+		},
+		"/assets/underworld243.h": {
+			"sdcard": false
+		},
+		"/assets/underworld244.h": {
+			"sdcard": false
+		},
+		"/assets/underworld245.h": {
+			"sdcard": false
+		},
+		"/assets/underworld246.h": {
+			"sdcard": false
+		},
+		"/assets/underworld247.h": {
+			"sdcard": false
+		},
+		"/assets/underworld248.h": {
+			"sdcard": false
+		},
+		"/assets/underworld253.h": {
+			"sdcard": false
+		},
+		"/assets/underworld249.h": {
+			"sdcard": false
+		},
+		"/assets/underworld255.h": {
+			"sdcard": false
+		},
+		"/assets/underworld258.h": {
+			"sdcard": false
+		},
+		"/assets/underworld257.h": {
+			"sdcard": false
+		},
+		"/assets/underworld256.h": {
+			"sdcard": false
+		},
+		"/assets/underworld250.h": {
+			"sdcard": false
+		},
+		"/assets/underworld252.h": {
+			"sdcard": false
+		},
+		"/assets/tiny1.h": {
+			"sdcard": false
+		},
+		"/assets/tiny2.h": {
+			"sdcard": false
+		},
+		"/assets/tiny3.h": {
+			"sdcard": false
+		},
+		"/assets/tiny5.h": {
+			"sdcard": false
+		},
+		"/assets/tiny4.h": {
+			"sdcard": false
+		},
+		"/assets/tiny6.h": {
+			"sdcard": false
+		},
+		"/assets/tiny8.h": {
+			"sdcard": false
+		},
+		"/assets/tiny7.h": {
+			"sdcard": false
+		},
+		"/assets/tiny9.h": {
+			"sdcard": false
+		},
+		"/assets/tiny10.h": {
+			"sdcard": false
+		},
+		"/assets/tiny11.h": {
+			"sdcard": false
+		},
+		"/assets/tiny12.h": {
+			"sdcard": false
+		},
+		"/assets/tiny13.h": {
+			"sdcard": false
+		},
+		"/assets/tiny14.h": {
+			"sdcard": false
+		},
+		"/assets/tiny15.h": {
+			"sdcard": false
+		},
+		"/assets/tiny16.h": {
+			"sdcard": false
+		},
+		"/assets/tiny17.h": {
+			"sdcard": false
+		},
+		"/assets/tiny18.h": {
+			"sdcard": false
+		},
+		"/assets/underworld259.h": {
+			"sdcard": false
+		},
+		"/assets/underworld254.h": {
+			"sdcard": false
+		},
+		"/assets/underworld260.h": {
+			"sdcard": false
+		},
+		"/assets/underworld251.h": {
+			"sdcard": false
+		},
+		"/assets/tiny20.h": {
+			"sdcard": false
+		},
+		"/assets/tiny19.h": {
+			"sdcard": false
+		},
+		"/assets/tiny22.h": {
+			"sdcard": false
+		},
+		"/assets/tiny23.h": {
+			"sdcard": false
+		},
+		"/assets/tiny24.h": {
+			"sdcard": false
+		},
+		"/assets/tiny25.h": {
+			"sdcard": false
+		},
+		"/assets/tiny26.h": {
+			"sdcard": false
+		},
+		"/assets/tiny27.h": {
+			"sdcard": false
+		},
+		"/assets/tiny28.h": {
+			"sdcard": false
+		},
+		"/assets/tiny29.h": {
+			"sdcard": false
+		},
+		"/assets/tiny30.h": {
+			"sdcard": false
+		},
+		"/assets/tiny32.h": {
+			"sdcard": false
+		},
+		"/assets/tiny31.h": {
+			"sdcard": false
+		},
+		"/assets/tiny34.h": {
+			"sdcard": false
+		},
+		"/assets/tiny33.h": {
+			"sdcard": false
+		},
+		"/assets/tiny35.h": {
+			"sdcard": false
+		},
+		"/assets/tiny36.h": {
+			"sdcard": false
+		},
+		"/assets/tiny37.h": {
+			"sdcard": false
+		},
+		"/assets/tiny38.h": {
+			"sdcard": false
+		},
+		"/assets/tiny39.h": {
+			"sdcard": false
+		},
+		"/assets/tiny40.h": {
+			"sdcard": false
+		},
+		"/assets/tiny41.h": {
+			"sdcard": false
+		},
+		"/assets/tiny42.h": {
+			"sdcard": false
+		},
+		"/assets/tiny43.h": {
+			"sdcard": false
+		},
+		"/assets/tiny44.h": {
+			"sdcard": false
+		},
+		"/assets/tiny45.h": {
+			"sdcard": false
+		},
+		"/assets/tiny46.h": {
+			"sdcard": false
+		},
+		"/assets/tiny47.h": {
+			"sdcard": false
+		},
+		"/assets/tiny21.h": {
+			"sdcard": false
+		},
+		"/PINES.bin.1.png": {
+			"sdcard": false
+		},
+		"/PINES.bin.2.png": {
+			"sdcard": false
+		},
+		"/PINES.bin.3.png": {
+			"sdcard": false
+		},
+		"/PINES.bin.4.gif": {
+			"sdcard": false
+		},
+		"/assets/lvl.png": {
+			"sdcard": false
+		},
+		"/assets/heart.png": {
+			"sdcard": false
+		},
+		"/assets/fist.png": {
+			"sdcard": false
+		},
+		"/assets/swordIcon.png": {
+			"sdcard": false
+		},
+		"/assets/shirtIcon.png": {
+			"sdcard": false
+		},
+		"/assets/shieldIcon.png": {
+			"sdcard": false
+		},
+		"/assets/arrowIcon.png": {
+			"sdcard": false
+		},
+		"/assets/fistIcon.png": {
+			"sdcard": false
+		},
+		"/assets/heartIcon.png": {
+			"sdcard": false
+		},
+		"/assets/paperIcon.png": {
+			"sdcard": false
+		},
+		"/assets/fireBallIcon.png": {
+			"sdcard": false
+		},
+		"/assets/boltIcon.png": {
+			"sdcard": false
+		},
+		"/assets/miscIcon1.png": {
+			"sdcard": false
+		},
+		"/assets/miscIcon2.png": {
+			"sdcard": false
+		},
+		"/assets/hourglassIcon.png": {
+			"sdcard": false
+		},
+		"/assets/miscIcon3.png": {
+			"sdcard": false
+		},
+		"/assets/skullIcon.png": {
+			"sdcard": false
+		},
+		"/assets/talkIcon.png": {
+			"sdcard": false
+		},
+		"/assets/exclamationIcon.png": {
+			"sdcard": false
+		},
+		"/assets/questionIcon.png": {
+			"sdcard": false
+		},
+		"/assets/xIcon.png": {
+			"sdcard": false
+		},
+		"/assets/starIcon.png": {
+			"sdcard": false
+		},
+		"/assets/coinIcon.png": {
+			"sdcard": false
+		},
+		"/assets/sArrow.png": {
+			"sdcard": false
+		},
+		"/assets/sBolt.png": {
+			"sdcard": false
+		},
+		"/assets/sCoin.png": {
+			"sdcard": false
+		},
+		"/assets/sExclamation.png": {
+			"sdcard": false
+		},
+		"/assets/sFireball.png": {
+			"sdcard": false
+		},
+		"/assets/sFist.png": {
+			"sdcard": false
+		},
+		"/assets/sHeart.png": {
+			"sdcard": false
+		},
+		"/assets/sHourglass.png": {
+			"sdcard": false
+		},
+		"/assets/sLvl.png": {
+			"sdcard": false
+		},
+		"/assets/sMisc1.png": {
+			"sdcard": false
+		},
+		"/assets/sMisc2.png": {
+			"sdcard": false
+		},
+		"/assets/sMisc3.png": {
+			"sdcard": false
+		},
+		"/assets/sPaper.png": {
+			"sdcard": false
+		},
+		"/assets/sQuestion.png": {
+			"sdcard": false
+		},
+		"/assets/sShield.png": {
+			"sdcard": false
+		},
+		"/assets/sShirt.png": {
+			"sdcard": false
+		},
+		"/assets/sSkull.png": {
+			"sdcard": false
+		},
+		"/assets/sStar.png": {
+			"sdcard": false
+		},
+		"/assets/sSword.png": {
+			"sdcard": false
+		},
+		"/assets/sTalk.png": {
+			"sdcard": false
+		},
+		"/assets/sCorner1.png": {
+			"sdcard": false
+		},
+		"/assets/sCorner2.png": {
+			"sdcard": false
+		},
+		"/assets/sCorner3.png": {
+			"sdcard": false
+		},
+		"/assets/sCorner4.png": {
+			"sdcard": false
+		},
+		"/assets/sCorner5.png": {
+			"sdcard": false
+		},
+		"/assets/sCorner6.png": {
+			"sdcard": false
+		},
+		"/assets/sCorner7.png": {
+			"sdcard": false
+		},
+		"/assets/sCornerA1.png": {
+			"sdcard": false
+		},
+		"/assets/sCornerA2.png": {
+			"sdcard": false
+		},
+		"/assets/sCornerB1.png": {
+			"sdcard": false
+		},
+		"/assets/sCornerB2.png": {
+			"sdcard": false
+		},
+		"/assets/cursor1.png": {
+			"sdcard": false
+		},
+		"/assets/cursor2.png": {
+			"sdcard": false
+		},
+		"/assets/cursor3.png": {
+			"sdcard": false
+		},
+		"/assets/cursor4.png": {
+			"sdcard": false
+		},
+		"/assets/sCornerA3.png": {
+			"sdcard": false
+		},
+		"/assets/sCornerA4.png": {
+			"sdcard": false
+		},
+		"/assets/sCornerB3.png": {
+			"sdcard": false
+		},
+		"/assets/sCornerB4.png": {
+			"sdcard": false
+		},
+		"/assets/sBtn.png": {
+			"sdcard": false
+		},
+		"/assets/sBtnDot.png": {
+			"sdcard": false
+		},
+		"/assets/sBtnA.png": {
+			"sdcard": false
+		},
+		"/assets/sBtnB.png": {
+			"sdcard": false
+		},
+		"/assets/lPotion.png": {
+			"sdcard": false
+		},
+		"/assets/lTome1.png": {
+			"sdcard": false
+		},
+		"/assets/lTome2.png": {
+			"sdcard": false
+		},
+		"/assets/lTome3.png": {
+			"sdcard": false
+		},
+		"/assets/lTome4.png": {
+			"sdcard": false
+		},
+		"/assets/lTome5.png": {
+			"sdcard": false
+		},
+		"/assets/lTome6.png": {
+			"sdcard": false
+		},
+		"/assets/lTome7.png": {
+			"sdcard": false
+		},
+		"/assets/lTome8.png": {
+			"sdcard": false
+		},
+		"/assets/lTome9.png": {
+			"sdcard": false
+		},
+		"/assets/lDoor1.png": {
+			"sdcard": false
+		},
+		"/assets/lTome10.png": {
+			"sdcard": false
+		},
+		"/assets/lWall1.png": {
+			"sdcard": false
+		},
+		"/assets/lWall2.png": {
+			"sdcard": false
+		},
+		"/assets/lScroll1.png": {
+			"sdcard": false
+		},
+		"/assets/lScroll2.png": {
+			"sdcard": false
+		},
+		"/assets/lScroll3.png": {
+			"sdcard": false
+		},
+		"/assets/lScroll4.png": {
+			"sdcard": false
+		},
+		"/assets/lScroll5.png": {
+			"sdcard": false
+		},
+		"/assets/lScroll6.png": {
+			"sdcard": false
+		},
+		"/assets/lScroll7.png": {
+			"sdcard": false
+		},
+		"/assets/lScroll8.png": {
+			"sdcard": false
+		},
+		"/assets/lScroll9.png": {
+			"sdcard": false
+		},
+		"/assets/lScroll10.png": {
+			"sdcard": false
+		},
+		"/assets/lScroll11.png": {
+			"sdcard": false
+		},
+		"/assets/lScroll12.png": {
+			"sdcard": false
+		},
+		"/assets/lScroll13.png": {
+			"sdcard": false
+		},
+		"/assets/lScroll14.png": {
+			"sdcard": false
+		},
+		"/assets/lScroll15.png": {
+			"sdcard": false
+		},
+		"/assets/lScroll16.png": {
+			"sdcard": false
+		},
+		"/assets/lScroll17.png": {
+			"sdcard": false
+		},
+		"/assets/lScroll18.png": {
+			"sdcard": false
+		},
+		"/assets/lScroll19.png": {
+			"sdcard": false
+		},
+		"/assets/lScroll20.png": {
+			"sdcard": false
+		},
+		"/assets/underworlld131.png": {
+			"sdcard": false
+		},
+		"/assets/lWall3.png": {
+			"sdcard": false
+		},
+		"/assets/lStairsDown.png": {
+			"sdcard": false
+		},
+		"/assets/lStairsUp.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc1.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc2.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc3.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon1.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon2.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon3.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon4.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon5.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon6.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon7.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon8.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon9.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon10.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon11.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon12.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon13.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon14.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon15.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon16.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon17.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon18.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon19.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon20.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon21.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon22.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon23.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon24.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon25.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon26.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon27.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon28.png": {
+			"sdcard": false
+		},
+		"/assets/lWeapon29.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc4.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc5.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc6.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc7.png": {
+			"sdcard": false
+		},
+		"/assets/lDoor2.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc8.png": {
+			"sdcard": false
+		},
+		"/assets/lWall4.png": {
+			"sdcard": false
+		},
+		"/assets/lWall5.png": {
+			"sdcard": false
+		},
+		"/assets/lWall6.png": {
+			"sdcard": false
+		},
+		"/assets/lWall12.png": {
+			"sdcard": false
+		},
+		"/assets/lWall7.png": {
+			"sdcard": false
+		},
+		"/assets/lWall8.png": {
+			"sdcard": false
+		},
+		"/assets/lWall9.png": {
+			"sdcard": false
+		},
+		"/assets/lWall10.png": {
+			"sdcard": false
+		},
+		"/assets/lWall13.png": {
+			"sdcard": false
+		},
+		"/assets/lWall11.png": {
+			"sdcard": false
+		},
+		"/assets/lWall14.png": {
+			"sdcard": false
+		},
+		"/assets/lWall15.png": {
+			"sdcard": false
+		},
+		"/assets/lArmor1.png": {
+			"sdcard": false
+		},
+		"/assets/lArmor2.png": {
+			"sdcard": false
+		},
+		"/assets/lArmor3.png": {
+			"sdcard": false
+		},
+		"/assets/lArmor4.png": {
+			"sdcard": false
+		},
+		"/assets/lArmor5.png": {
+			"sdcard": false
+		},
+		"/assets/lArmor6.png": {
+			"sdcard": false
+		},
+		"/assets/lArmor7.png": {
+			"sdcard": false
+		},
+		"/assets/lArmor8.png": {
+			"sdcard": false
+		},
+		"/assets/lArmor9.png": {
+			"sdcard": false
+		},
+		"/assets/lArmor10.png": {
+			"sdcard": false
+		},
+		"/assets/lShield1.png": {
+			"sdcard": false
+		},
+		"/assets/lShield2.png": {
+			"sdcard": false
+		},
+		"/assets/lShield3.png": {
+			"sdcard": false
+		},
+		"/assets/lShield4.png": {
+			"sdcard": false
+		},
+		"/assets/lShield5.png": {
+			"sdcard": false
+		},
+		"/assets/lShield6.png": {
+			"sdcard": false
+		},
+		"/assets/lShield7.png": {
+			"sdcard": false
+		},
+		"/assets/lShield8.png": {
+			"sdcard": false
+		},
+		"/assets/lShield9.png": {
+			"sdcard": false
+		},
+		"/assets/lShield10.png": {
+			"sdcard": false
+		},
+		"/assets/lHelmet1.png": {
+			"sdcard": false
+		},
+		"/assets/lHelmet2.png": {
+			"sdcard": false
+		},
+		"/assets/lHelmet3.png": {
+			"sdcard": false
+		},
+		"/assets/lHelmet4.png": {
+			"sdcard": false
+		},
+		"/assets/lHelmet5.png": {
+			"sdcard": false
+		},
+		"/assets/lHelmet6.png": {
+			"sdcard": false
+		},
+		"/assets/lHelmet7.png": {
+			"sdcard": false
+		},
+		"/assets/lHelmet8.png": {
+			"sdcard": false
+		},
+		"/assets/lHelmet9.png": {
+			"sdcard": false
+		},
+		"/assets/lHelmet10.png": {
+			"sdcard": false
+		},
+		"/assets/lChar1.png": {
+			"sdcard": false
+		},
+		"/assets/lChar2.png": {
+			"sdcard": false
+		},
+		"/assets/lChar3.png": {
+			"sdcard": false
+		},
+		"/assets/lChar4.png": {
+			"sdcard": false
+		},
+		"/assets/lChar5.png": {
+			"sdcard": false
+		},
+		"/assets/lChar6.png": {
+			"sdcard": false
+		},
+		"/assets/lChar7.png": {
+			"sdcard": false
+		},
+		"/assets/lChar8.png": {
+			"sdcard": false
+		},
+		"/assets/lChar9.png": {
+			"sdcard": false
+		},
+		"/assets/lChar10.png": {
+			"sdcard": false
+		},
+		"/assets/lChar11.png": {
+			"sdcard": false
+		},
+		"/assets/lChar12.png": {
+			"sdcard": false
+		},
+		"/assets/lChar13.png": {
+			"sdcard": false
+		},
+		"/assets/lChar14.png": {
+			"sdcard": false
+		},
+		"/assets/lChar15.png": {
+			"sdcard": false
+		},
+		"/assets/lChar16.png": {
+			"sdcard": false
+		},
+		"/assets/lChar17.png": {
+			"sdcard": false
+		},
+		"/assets/lChar18.png": {
+			"sdcard": false
+		},
+		"/assets/lChar19.png": {
+			"sdcard": false
+		},
+		"/assets/lChar20.png": {
+			"sdcard": false
+		},
+		"/assets/lChar21.png": {
+			"sdcard": false
+		},
+		"/assets/lChar22.png": {
+			"sdcard": false
+		},
+		"/assets/lChar23.png": {
+			"sdcard": false
+		},
+		"/assets/lChar24.png": {
+			"sdcard": false
+		},
+		"/assets/lChar25.png": {
+			"sdcard": false
+		},
+		"/assets/lChar26.png": {
+			"sdcard": false
+		},
+		"/assets/lChar27.png": {
+			"sdcard": false
+		},
+		"/assets/lChar28.png": {
+			"sdcard": false
+		},
+		"/assets/lChar29.png": {
+			"sdcard": false
+		},
+		"/assets/lChar30.png": {
+			"sdcard": false
+		},
+		"/assets/lChar31.png": {
+			"sdcard": false
+		},
+		"/assets/lChar32.png": {
+			"sdcard": false
+		},
+		"/assets/lChar33.png": {
+			"sdcard": false
+		},
+		"/assets/lChar34.png": {
+			"sdcard": false
+		},
+		"/assets/lChar35.png": {
+			"sdcard": false
+		},
+		"/assets/lChar36.png": {
+			"sdcard": false
+		},
+		"/assets/lChar37.png": {
+			"sdcard": false
+		},
+		"/assets/lChar38.png": {
+			"sdcard": false
+		},
+		"/assets/lChar39.png": {
+			"sdcard": false
+		},
+		"/assets/lChar40.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon1.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon2.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon3.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon4.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon5.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon6.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon7.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon8.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon9.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon10.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon11.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon12.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon13.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon14.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon15.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon16.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon17.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon18.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon19.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon20.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon21.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon22.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon23.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon24.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon25.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon26.png": {
+			"sdcard": false
+		},
+		"/assets/lIcon27.png": {
+			"sdcard": false
+		},
+		"/assets/lHeal.png": {
+			"sdcard": false
+		},
+		"/assets/lFireball.png": {
+			"sdcard": false
+		},
+		"/assets/lRock.png": {
+			"sdcard": false
+		},
+		"/assets/lFloor1.png": {
+			"sdcard": false
+		},
+		"/assets/lFloor2.png": {
+			"sdcard": false
+		},
+		"/assets/lFloor3.png": {
+			"sdcard": false
+		},
+		"/assets/lFloor4.png": {
+			"sdcard": false
+		},
+		"/assets/lDoor3.png": {
+			"sdcard": false
+		},
+		"/assets/lFloor5.png": {
+			"sdcard": false
+		},
+		"/assets/lFrame1.png": {
+			"sdcard": false
+		},
+		"/assets/lFrame2.png": {
+			"sdcard": false
+		},
+		"/assets/lFrame3.png": {
+			"sdcard": false
+		},
+		"/assets/lDoor4.png": {
+			"sdcard": false
+		},
+		"/assets/lFrame4.png": {
+			"sdcard": false
+		},
+		"/assets/lFrame5.png": {
+			"sdcard": false
+		},
+		"/assets/lDoor5.png": {
+			"sdcard": false
+		},
+		"/assets/lFloor6.png": {
+			"sdcard": false
+		},
+		"/assets/lFloor7.png": {
+			"sdcard": false
+		},
+		"/assets/lFloor8.png": {
+			"sdcard": false
+		},
+		"/assets/lFloor9.png": {
+			"sdcard": false
+		},
+		"/assets/lFloor10.png": {
+			"sdcard": false
+		},
+		"/assets/lFloor11.png": {
+			"sdcard": false
+		},
+		"/assets/lFloor12.png": {
+			"sdcard": false
+		},
+		"/assets/lTree1.png": {
+			"sdcard": false
+		},
+		"/assets/lTree2.png": {
+			"sdcard": false
+		},
+		"/assets/lDoor6.png": {
+			"sdcard": false
+		},
+		"/assets/lFence.png": {
+			"sdcard": false
+		},
+		"/assets/lTomb.png": {
+			"sdcard": false
+		},
+		"/assets/lBones.png": {
+			"sdcard": false
+		},
+		"/assets/lPosts.png": {
+			"sdcard": false
+		},
+		"/assets/lSign.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc9.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc10.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc11.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc12.png": {
+			"sdcard": false
+		},
+		"/assets/lDoor7.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc13.png": {
+			"sdcard": false
+		},
+		"/assets/lWater1.png": {
+			"sdcard": false
+		},
+		"/assets/lWater2.png": {
+			"sdcard": false
+		},
+		"/assets/lBoat.png": {
+			"sdcard": false
+		},
+		"/assets/lWater3.png": {
+			"sdcard": false
+		},
+		"/assets/lDoor8.png": {
+			"sdcard": false
+		},
+		"/assets/lDoor9.png": {
+			"sdcard": false
+		},
+		"/assets/lDoor10.png": {
+			"sdcard": false
+		},
+		"/assets/lBuilding1.png": {
+			"sdcard": false
+		},
+		"/assets/lBuilding2.png": {
+			"sdcard": false
+		},
+		"/assets/lBuilding3.png": {
+			"sdcard": false
+		},
+		"/assets/lBuilding4.png": {
+			"sdcard": false
+		},
+		"/assets/lBuilding5.png": {
+			"sdcard": false
+		},
+		"/assets/lBuilding6.png": {
+			"sdcard": false
+		},
+		"/assets/lKey1.png": {
+			"sdcard": false
+		},
+		"/assets/lKey2.png": {
+			"sdcard": false
+		},
+		"/assets/lKey3.png": {
+			"sdcard": false
+		},
+		"/assets/lKey4.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc14.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc15.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc16.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc17.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc18.png": {
+			"sdcard": false
+		},
+		"/assets/lBed.png": {
+			"sdcard": false
+		},
+		"/assets/lCoins.png": {
+			"sdcard": false
+		},
+		"/assets/lBag.png": {
+			"sdcard": false
+		},
+		"/assets/lPotion1.png": {
+			"sdcard": false
+		},
+		"/assets/lPotion2.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc19.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc20.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc21.png": {
+			"sdcard": false
+		},
+		"/assets/lPotion3.png": {
+			"sdcard": false
+		},
+		"/assets/lPotion4.png": {
+			"sdcard": false
+		},
+		"/assets/lMisc22.png": {
+			"sdcard": false
+		},
+		"/assets/armor10.png": {
+			"sdcard": false
+		},
+		"/assets/armor1.png": {
+			"sdcard": false
+		},
+		"/assets/armor2.png": {
+			"sdcard": false
+		},
+		"/assets/armor3.png": {
+			"sdcard": false
+		},
+		"/assets/armor4.png": {
+			"sdcard": false
+		},
+		"/assets/armor5.png": {
+			"sdcard": false
+		},
+		"/assets/armor6.png": {
+			"sdcard": false
+		},
+		"/assets/armor7.png": {
+			"sdcard": false
+		},
+		"/assets/armor8.png": {
+			"sdcard": false
+		},
+		"/assets/armor9.png": {
+			"sdcard": false
+		},
+		"/assets/bag.png": {
+			"sdcard": false
+		},
+		"/assets/bed.png": {
+			"sdcard": false
+		},
+		"/assets/boat.png": {
+			"sdcard": false
+		},
+		"/assets/bones.png": {
+			"sdcard": false
+		},
+		"/assets/building1.png": {
+			"sdcard": false
+		},
+		"/assets/building2.png": {
+			"sdcard": false
+		},
+		"/assets/building3.png": {
+			"sdcard": false
+		},
+		"/assets/building4.png": {
+			"sdcard": false
+		},
+		"/assets/building5.png": {
+			"sdcard": false
+		},
+		"/assets/building6.png": {
+			"sdcard": false
+		},
+		"/assets/char10.png": {
+			"sdcard": false
+		},
+		"/assets/char11.png": {
+			"sdcard": false
+		},
+		"/assets/char12.png": {
+			"sdcard": false
+		},
+		"/assets/char13.png": {
+			"sdcard": false
+		},
+		"/assets/char14.png": {
+			"sdcard": false
+		},
+		"/assets/char15.png": {
+			"sdcard": false
+		},
+		"/assets/char16.png": {
+			"sdcard": false
+		},
+		"/assets/char17.png": {
+			"sdcard": false
+		},
+		"/assets/char18.png": {
+			"sdcard": false
+		},
+		"/assets/char19.png": {
+			"sdcard": false
+		},
+		"/assets/char1.png": {
+			"sdcard": false
+		},
+		"/assets/char20.png": {
+			"sdcard": false
+		},
+		"/assets/char21.png": {
+			"sdcard": false
+		},
+		"/assets/char22.png": {
+			"sdcard": false
+		},
+		"/assets/char23.png": {
+			"sdcard": false
+		},
+		"/assets/char24.png": {
+			"sdcard": false
+		},
+		"/assets/char25.png": {
+			"sdcard": false
+		},
+		"/assets/char26.png": {
+			"sdcard": false
+		},
+		"/assets/char27.png": {
+			"sdcard": false
+		},
+		"/assets/char28.png": {
+			"sdcard": false
+		},
+		"/assets/char29.png": {
+			"sdcard": false
+		},
+		"/assets/char2.png": {
+			"sdcard": false
+		},
+		"/assets/char30.png": {
+			"sdcard": false
+		},
+		"/assets/char31.png": {
+			"sdcard": false
+		},
+		"/assets/char32.png": {
+			"sdcard": false
+		},
+		"/assets/char33.png": {
+			"sdcard": false
+		},
+		"/assets/char34.png": {
+			"sdcard": false
+		},
+		"/assets/char35.png": {
+			"sdcard": false
+		},
+		"/assets/char36.png": {
+			"sdcard": false
+		},
+		"/assets/char37.png": {
+			"sdcard": false
+		},
+		"/assets/char38.png": {
+			"sdcard": false
+		},
+		"/assets/char39.png": {
+			"sdcard": false
+		},
+		"/assets/char3.png": {
+			"sdcard": false
+		},
+		"/assets/char40.png": {
+			"sdcard": false
+		},
+		"/assets/char4.png": {
+			"sdcard": false
+		},
+		"/assets/char5.png": {
+			"sdcard": false
+		},
+		"/assets/char6.png": {
+			"sdcard": false
+		},
+		"/assets/char7.png": {
+			"sdcard": false
+		},
+		"/assets/char8.png": {
+			"sdcard": false
+		},
+		"/assets/char9.png": {
+			"sdcard": false
+		},
+		"/assets/coins.png": {
+			"sdcard": false
+		},
+		"/assets/door10.png": {
+			"sdcard": false
+		},
+		"/assets/door1.png": {
+			"sdcard": false
+		},
+		"/assets/door2.png": {
+			"sdcard": false
+		},
+		"/assets/door3.png": {
+			"sdcard": false
+		},
+		"/assets/door5.png": {
+			"sdcard": false
+		},
+		"/assets/door6.png": {
+			"sdcard": false
+		},
+		"/assets/door7.png": {
+			"sdcard": false
+		},
+		"/assets/door8.png": {
+			"sdcard": false
+		},
+		"/assets/door4.png": {
+			"sdcard": false
+		},
+		"/assets/door9.png": {
+			"sdcard": false
+		},
+		"/assets/fence.png": {
+			"sdcard": false
+		},
+		"/assets/fireball.png": {
+			"sdcard": false
+		},
+		"/assets/floor10.png": {
+			"sdcard": false
+		},
+		"/assets/floor11.png": {
+			"sdcard": false
+		},
+		"/assets/floor12.png": {
+			"sdcard": false
+		},
+		"/assets/floor1.png": {
+			"sdcard": false
+		},
+		"/assets/floor2.png": {
+			"sdcard": false
+		},
+		"/assets/floor3.png": {
+			"sdcard": false
+		},
+		"/assets/floor4.png": {
+			"sdcard": false
+		},
+		"/assets/floor5.png": {
+			"sdcard": false
+		},
+		"/assets/floor6.png": {
+			"sdcard": false
+		},
+		"/assets/floor7.png": {
+			"sdcard": false
+		},
+		"/assets/floor8.png": {
+			"sdcard": false
+		},
+		"/assets/floor9.png": {
+			"sdcard": false
+		},
+		"/assets/frame1.png": {
+			"sdcard": false
+		},
+		"/assets/frame2.png": {
+			"sdcard": false
+		},
+		"/assets/frame3.png": {
+			"sdcard": false
+		},
+		"/assets/frame4.png": {
+			"sdcard": false
+		},
+		"/assets/frame5.png": {
+			"sdcard": false
+		},
+		"/assets/heal.png": {
+			"sdcard": false
+		},
+		"/assets/helmet10.png": {
+			"sdcard": false
+		},
+		"/assets/helmet1.png": {
+			"sdcard": false
+		},
+		"/assets/helmet2.png": {
+			"sdcard": false
+		},
+		"/assets/helmet3.png": {
+			"sdcard": false
+		},
+		"/assets/helmet4.png": {
+			"sdcard": false
+		},
+		"/assets/helmet5.png": {
+			"sdcard": false
+		},
+		"/assets/helmet6.png": {
+			"sdcard": false
+		},
+		"/assets/helmet7.png": {
+			"sdcard": false
+		},
+		"/assets/helmet8.png": {
+			"sdcard": false
+		},
+		"/assets/helmet9.png": {
+			"sdcard": false
+		},
+		"/assets/icon10.png": {
+			"sdcard": false
+		},
+		"/assets/icon11.png": {
+			"sdcard": false
+		},
+		"/assets/icon12.png": {
+			"sdcard": false
+		},
+		"/assets/icon13.png": {
+			"sdcard": false
+		},
+		"/assets/icon14.png": {
+			"sdcard": false
+		},
+		"/assets/icon15.png": {
+			"sdcard": false
+		},
+		"/assets/icon16.png": {
+			"sdcard": false
+		},
+		"/assets/icon17.png": {
+			"sdcard": false
+		},
+		"/assets/icon18.png": {
+			"sdcard": false
+		},
+		"/assets/icon19.png": {
+			"sdcard": false
+		},
+		"/assets/icon1.png": {
+			"sdcard": false
+		},
+		"/assets/icon20.png": {
+			"sdcard": false
+		},
+		"/assets/icon21.png": {
+			"sdcard": false
+		},
+		"/assets/icon22.png": {
+			"sdcard": false
+		},
+		"/assets/icon23.png": {
+			"sdcard": false
+		},
+		"/assets/icon24.png": {
+			"sdcard": false
+		},
+		"/assets/icon25.png": {
+			"sdcard": false
+		},
+		"/assets/icon26.png": {
+			"sdcard": false
+		},
+		"/assets/icon27.png": {
+			"sdcard": false
+		},
+		"/assets/icon2.png": {
+			"sdcard": false
+		},
+		"/assets/icon3.png": {
+			"sdcard": false
+		},
+		"/assets/icon4.png": {
+			"sdcard": false
+		},
+		"/assets/icon5.png": {
+			"sdcard": false
+		},
+		"/assets/icon6.png": {
+			"sdcard": false
+		},
+		"/assets/icon7.png": {
+			"sdcard": false
+		},
+		"/assets/icon8.png": {
+			"sdcard": false
+		},
+		"/assets/icon9.png": {
+			"sdcard": false
+		},
+		"/assets/key1.png": {
+			"sdcard": false
+		},
+		"/assets/key2.png": {
+			"sdcard": false
+		},
+		"/assets/key3.png": {
+			"sdcard": false
+		},
+		"/assets/key4.png": {
+			"sdcard": false
+		},
+		"/assets/misc10.png": {
+			"sdcard": false
+		},
+		"/assets/misc11.png": {
+			"sdcard": false
+		},
+		"/assets/misc12.png": {
+			"sdcard": false
+		},
+		"/assets/misc13.png": {
+			"sdcard": false
+		},
+		"/assets/misc14.png": {
+			"sdcard": false
+		},
+		"/assets/misc15.png": {
+			"sdcard": false
+		},
+		"/assets/misc16.png": {
+			"sdcard": false
+		},
+		"/assets/misc17.png": {
+			"sdcard": false
+		},
+		"/assets/misc18.png": {
+			"sdcard": false
+		},
+		"/assets/misc19.png": {
+			"sdcard": false
+		},
+		"/assets/misc1.png": {
+			"sdcard": false
+		},
+		"/assets/misc20.png": {
+			"sdcard": false
+		},
+		"/assets/misc21.png": {
+			"sdcard": false
+		},
+		"/assets/misc22.png": {
+			"sdcard": false
+		},
+		"/assets/misc2.png": {
+			"sdcard": false
+		},
+		"/assets/misc3.png": {
+			"sdcard": false
+		},
+		"/assets/misc4.png": {
+			"sdcard": false
+		},
+		"/assets/misc5.png": {
+			"sdcard": false
+		},
+		"/assets/misc6.png": {
+			"sdcard": false
+		},
+		"/assets/misc7.png": {
+			"sdcard": false
+		},
+		"/assets/misc8.png": {
+			"sdcard": false
+		},
+		"/assets/misc9.png": {
+			"sdcard": false
+		},
+		"/assets/posts.png": {
+			"sdcard": false
+		},
+		"/assets/potion1.png": {
+			"sdcard": false
+		},
+		"/assets/potion2.png": {
+			"sdcard": false
+		},
+		"/assets/potion3.png": {
+			"sdcard": false
+		},
+		"/assets/potion4.png": {
+			"sdcard": false
+		},
+		"/assets/potion.png": {
+			"sdcard": false
+		},
+		"/assets/rock.png": {
+			"sdcard": false
+		},
+		"/assets/scroll10.png": {
+			"sdcard": false
+		},
+		"/assets/scroll11.png": {
+			"sdcard": false
+		},
+		"/assets/scroll12.png": {
+			"sdcard": false
+		},
+		"/assets/scroll13.png": {
+			"sdcard": false
+		},
+		"/assets/scroll14.png": {
+			"sdcard": false
+		},
+		"/assets/scroll15.png": {
+			"sdcard": false
+		},
+		"/assets/scroll16.png": {
+			"sdcard": false
+		},
+		"/assets/scroll17.png": {
+			"sdcard": false
+		},
+		"/assets/scroll18.png": {
+			"sdcard": false
+		},
+		"/assets/scroll19.png": {
+			"sdcard": false
+		},
+		"/assets/scroll1.png": {
+			"sdcard": false
+		},
+		"/assets/scroll20.png": {
+			"sdcard": false
+		},
+		"/assets/scroll2.png": {
+			"sdcard": false
+		},
+		"/assets/scroll3.png": {
+			"sdcard": false
+		},
+		"/assets/scroll4.png": {
+			"sdcard": false
+		},
+		"/assets/scroll5.png": {
+			"sdcard": false
+		},
+		"/assets/scroll6.png": {
+			"sdcard": false
+		},
+		"/assets/scroll7.png": {
+			"sdcard": false
+		},
+		"/assets/scroll8.png": {
+			"sdcard": false
+		},
+		"/assets/scroll9.png": {
+			"sdcard": false
+		},
+		"/assets/shield10.png": {
+			"sdcard": false
+		},
+		"/assets/shield1.png": {
+			"sdcard": false
+		},
+		"/assets/shield2.png": {
+			"sdcard": false
+		},
+		"/assets/shield3.png": {
+			"sdcard": false
+		},
+		"/assets/shield4.png": {
+			"sdcard": false
+		},
+		"/assets/shield5.png": {
+			"sdcard": false
+		},
+		"/assets/shield6.png": {
+			"sdcard": false
+		},
+		"/assets/shield7.png": {
+			"sdcard": false
+		},
+		"/assets/shield8.png": {
+			"sdcard": false
+		},
+		"/assets/shield9.png": {
+			"sdcard": false
+		},
+		"/assets/sign.png": {
+			"sdcard": false
+		},
+		"/assets/stairsDown.png": {
+			"sdcard": false
+		},
+		"/assets/stairsUp.png": {
+			"sdcard": false
+		},
+		"/assets/tomb.png": {
+			"sdcard": false
+		},
+		"/assets/tome10.png": {
+			"sdcard": false
+		},
+		"/assets/tome1.png": {
+			"sdcard": false
+		},
+		"/assets/tome2.png": {
+			"sdcard": false
+		},
+		"/assets/tome3.png": {
+			"sdcard": false
+		},
+		"/assets/tome4.png": {
+			"sdcard": false
+		},
+		"/assets/tome5.png": {
+			"sdcard": false
+		},
+		"/assets/tome6.png": {
+			"sdcard": false
+		},
+		"/assets/tome7.png": {
+			"sdcard": false
+		},
+		"/assets/tome8.png": {
+			"sdcard": false
+		},
+		"/assets/tome9.png": {
+			"sdcard": false
+		},
+		"/assets/tree1.png": {
+			"sdcard": false
+		},
+		"/assets/tree2.png": {
+			"sdcard": false
+		},
+		"/assets/wall10.png": {
+			"sdcard": false
+		},
+		"/assets/wall11.png": {
+			"sdcard": false
+		},
+		"/assets/wall12.png": {
+			"sdcard": false
+		},
+		"/assets/wall13.png": {
+			"sdcard": false
+		},
+		"/assets/wall14.png": {
+			"sdcard": false
+		},
+		"/assets/wall15.png": {
+			"sdcard": false
+		},
+		"/assets/wall1.png": {
+			"sdcard": false
+		},
+		"/assets/wall2.png": {
+			"sdcard": false
+		},
+		"/assets/wall3.png": {
+			"sdcard": false
+		},
+		"/assets/wall4.png": {
+			"sdcard": false
+		},
+		"/assets/wall5.png": {
+			"sdcard": false
+		},
+		"/assets/wall6.png": {
+			"sdcard": false
+		},
+		"/assets/wall7.png": {
+			"sdcard": false
+		},
+		"/assets/wall8.png": {
+			"sdcard": false
+		},
+		"/assets/wall9.png": {
+			"sdcard": false
+		},
+		"/assets/water1.png": {
+			"sdcard": false
+		},
+		"/assets/water2.png": {
+			"sdcard": false
+		},
+		"/assets/water3.png": {
+			"sdcard": false
+		},
+		"/assets/weapon10.png": {
+			"sdcard": false
+		},
+		"/assets/weapon11.png": {
+			"sdcard": false
+		},
+		"/assets/weapon12.png": {
+			"sdcard": false
+		},
+		"/assets/weapon13.png": {
+			"sdcard": false
+		},
+		"/assets/weapon14.png": {
+			"sdcard": false
+		},
+		"/assets/weapon15.png": {
+			"sdcard": false
+		},
+		"/assets/weapon16.png": {
+			"sdcard": false
+		},
+		"/assets/weapon17.png": {
+			"sdcard": false
+		},
+		"/assets/weapon18.png": {
+			"sdcard": false
+		},
+		"/assets/weapon19.png": {
+			"sdcard": false
+		},
+		"/assets/weapon1.png": {
+			"sdcard": false
+		},
+		"/assets/weapon20.png": {
+			"sdcard": false
+		},
+		"/assets/weapon21.png": {
+			"sdcard": false
+		},
+		"/assets/weapon22.png": {
+			"sdcard": false
+		},
+		"/assets/weapon23.png": {
+			"sdcard": false
+		},
+		"/assets/weapon24.png": {
+			"sdcard": false
+		},
+		"/assets/weapon25.png": {
+			"sdcard": false
+		},
+		"/assets/weapon26.png": {
+			"sdcard": false
+		},
+		"/assets/weapon27.png": {
+			"sdcard": false
+		},
+		"/assets/weapon28.png": {
+			"sdcard": false
+		},
+		"/assets/weapon29.png": {
+			"sdcard": false
+		},
+		"/assets/weapon2.png": {
+			"sdcard": false
+		},
+		"/assets/weapon3.png": {
+			"sdcard": false
+		},
+		"/assets/weapon4.png": {
+			"sdcard": false
+		},
+		"/assets/weapon5.png": {
+			"sdcard": false
+		},
+		"/assets/weapon6.png": {
+			"sdcard": false
+		},
+		"/assets/weapon7.png": {
+			"sdcard": false
+		},
+		"/assets/weapon8.png": {
+			"sdcard": false
+		},
+		"/assets/weapon9.png": {
+			"sdcard": false
+		},
+		"/assets/canabalto.md": {
+			"sdcard": false
+		},
+		"/scripts/backgrounds.js": {
+			"sdcard": false
+		},
+		"/backgrounds": {
+			"sdcard": false
+		},
+		"/backgrounds/DotArcadePokittoScoreDISPLAYwhenGameover.png": {
+			"sdcard": false
+		},
+		"/backgrounds/LEDArcade_SnakeGame_NewPreview.png": {
+			"sdcard": false
+		},
+		"/backgrounds/cars.png": {
+			"sdcard": false
+		},
+		"/backgrounds/snake.png": {
+			"sdcard": false
+		},
+		"/scripts/#backgrounds.js#": {
+			"sdcard": false
+		},
+		"/pines": {
+			"sdcard": true
+		},
+		"/pines/cars.png.565": {
+			"sdcard": false
+		},
+		"/pines/snake.png.565": {
+			"sdcard": false
+		},
+		"/pines/carsundefined.565": {
+			"sdcard": false
+		},
+		"/pines/snakeundefined.565": {
+			"sdcard": false
+		},
+		"/pines/cars.565": {
+			"sdcard": false
+		},
+		"/pines/snake.565": {
+			"sdcard": false
+		},
+		"/PINES.bin.1.gif": {
+			"sdcard": false
+		},
+		"/PINES.bin.3.gif": {
+			"sdcard": false
+		},
+		"/assets/#canabalto.md#": {
+			"sdcard": false
+		},
+		"/assets/shape.aseprite": {
+			"sdcard": false
+		},
+		"/assets/shape1.png": {
+			"sdcard": false
+		},
+		"/assets/shape2.png": {
+			"sdcard": false
+		},
+		"/assets/shape3.png": {
+			"sdcard": false
+		},
+		"/assets/shape4.png": {
+			"sdcard": false
+		},
+		"/assets/shape5.png": {
+			"sdcard": false
+		},
+		"/assets/shape6.png": {
+			"sdcard": false
+		},
+		"/assets/shape7.png": {
+			"sdcard": false
+		},
+		"/assets/shape8.png": {
+			"sdcard": false
+		},
+		"/assets/shape9.png": {
+			"sdcard": false
+		},
+		"/assets/shape10.png": {
+			"sdcard": false
+		},
+		"/assets/shape11.png": {
+			"sdcard": false
+		},
+		"/assets/shape12.png": {
+			"sdcard": false
+		},
+		"/assets/shape13.png": {
+			"sdcard": false
+		},
+		"/assets/shape14.png": {
+			"sdcard": false
+		},
+		"/assets/shape15.png": {
+			"sdcard": false
+		},
+		"/assets/shape16.png": {
+			"sdcard": false
+		},
+		"/assets/shape17.png": {
+			"sdcard": false
+		},
+		"/assets/shape18.png": {
+			"sdcard": false
+		},
+		"/assets/shape19.png": {
+			"sdcard": false
+		},
+		"/assets/shape20.png": {
+			"sdcard": false
+		},
+		"/assets/sPts.png": {
+			"sdcard": false
+		},
+		"/pines/snake": {
+			"sdcard": false
+		},
+		"/pines/snake/snake.565": {
+			"sdcard": false
+		},
+		"/pines/snake/src.pines": {
+			"sdcard": false
+		},
+		"/backgrounds/TitleRally.png": {
+			"sdcard": false
+		},
+		"/backgrounds/TitleSnake.png": {
+			"sdcard": false
+		},
+		"/pines/TitleRally.565": {
+			"sdcard": false
+		},
+		"/pines/TitleSnake.565": {
+			"sdcard": false
+		},
+		"/pines/snake/TitleSnake.565": {
+			"sdcard": false
+		},
+		"/pines/snake/title.565": {
+			"sdcard": false
+		},
+		"/pines/snake/splash.565": {
+			"sdcard": false
+		},
+		"/pines/snake/#src.pines#": {
+			"sdcard": false
+		},
+		"/pines/snake (copy)": {
+			"sdcard": false
+		},
+		"/pines/snake (copy)/splash.565": {
+			"sdcard": false
+		},
+		"/pines/snake (copy)/src.pines": {
+			"sdcard": false
+		},
+		"/pines/snake (copy)/title.565": {
+			"sdcard": false
+		},
+		"/pines/racer": {
+			"sdcard": false
+		},
+		"/pines/racer/cars.565": {
+			"sdcard": false
+		},
+		"/pines/racer/TitleRally.565": {
+			"sdcard": false
+		},
+		"/pines/racer/splash.565": {
+			"sdcard": false
+		},
+		"/pines/racer/title.565": {
+			"sdcard": false
+		},
+		"/backgrounds/TitleLocked.png": {
+			"sdcard": false
+		},
+		"/backgrounds/TitleLocked.565": {
+			"sdcard": false
+		},
+		"/backgrounds/TitleSnake.565": {
+			"sdcard": false
+		},
+		"/backgrounds/TitleRally.565": {
+			"sdcard": false
+		},
+		"/backgrounds/cars.565": {
+			"sdcard": false
+		},
+		"/backgrounds/snake.565": {
+			"sdcard": false
+		},
+		"/pines/TitleLocked.565": {
+			"sdcard": false
+		},
+		"/pines/empty.565": {
+			"sdcard": false
+		},
+		"/pines/racer (copy)": {
+			"sdcard": false
+		},
+		"/pines/racer (copy)/splash.565": {
+			"sdcard": false
+		},
+		"/pines/racer (copy)/src.pines": {
+			"sdcard": false
+		},
+		"/pines/racer (copy)/title.565": {
+			"sdcard": false
+		},
+		"/pines/racer2": {
+			"sdcard": false
+		},
+		"/pines/racer2 (copy)": {
+			"sdcard": false
+		},
+		"/pines/racer2 (copy)/splash.565": {
+			"sdcard": false
+		},
+		"/pines/racer2 (copy)/src.pines": {
+			"sdcard": false
+		},
+		"/pines/racer2 (copy)/title.565": {
+			"sdcard": false
+		},
+		"/pines/racer3": {
+			"sdcard": false
+		},
+		"/pines/racer3 (copy)": {
+			"sdcard": false
+		},
+		"/pines/racer3 (copy)/splash.565": {
+			"sdcard": false
+		},
+		"/pines/racer3 (copy)/src.pines": {
+			"sdcard": false
+		},
+		"/pines/racer3 (copy)/title.565": {
+			"sdcard": false
+		},
+		"/pines/racer4": {
+			"sdcard": false
+		},
+		"/pines/snake/snake.png": {
+			"sdcard": false
+		},
+		"/pines/snake/TitleSnake.png": {
+			"sdcard": false
+		},
+		"/pines/snake/splash.png": {
+			"sdcard": false
+		},
+		"/pines/snake/title.png": {
+			"sdcard": false
+		},
+		"/pines/snake (copy)/splash.png": {
+			"sdcard": false
+		},
+		"/pines/snake (copy)/title.png": {
+			"sdcard": false
+		},
+		"/pines/racer (copy)/splash.png": {
+			"sdcard": false
+		},
+		"/pines/racer (copy)/title.png": {
+			"sdcard": false
+		},
+		"/pines/racer (another copy)": {
+			"sdcard": false
+		},
+		"/pines/racer (another copy)/splash.565": {
+			"sdcard": false
+		},
+		"/pines/racer (another copy)/splash.png": {
+			"sdcard": false
+		},
+		"/pines/racer (another copy)/src.pines": {
+			"sdcard": false
+		},
+		"/pines/racer (another copy)/title.565": {
+			"sdcard": false
+		},
+		"/pines/racer (another copy)/title.png": {
+			"sdcard": false
+		},
+		"/pines/racer1": {
+			"sdcard": false
+		},
+		"/pines/racer3/splash.565": {
+			"sdcard": false
+		},
+		"/pines/racer3/splash.png": {
+			"sdcard": false
+		},
+		"/pines/racer3/src.pines": {
+			"sdcard": false
+		},
+		"/pines/racer3/title.565": {
+			"sdcard": false
+		},
+		"/pines/racer3/title.png": {
+			"sdcard": false
+		},
+		"/pines/racer1/splash.565": {
+			"sdcard": false
+		},
+		"/pines/racer1/title.565": {
+			"sdcard": false
+		},
+		"/pines/smash-it": {
+			"sdcard": false
+		},
+		"/pines/smash-it/splash.png": {
+			"sdcard": false
+		},
+		"/pines/smash-it/title.png": {
+			"sdcard": false
+		},
+		"/pines/smash-it/TitleSmashIt.png": {
+			"sdcard": false
+		},
+		"/pines/racer1/splash.png": {
+			"sdcard": false
+		},
+		"/pines/racer1/src.pines": {
+			"sdcard": false
+		},
+		"/pines/racer1/title.png": {
+			"sdcard": false
+		},
+		"/pines/racer2/splash.565": {
+			"sdcard": false
+		},
+		"/pines/racer2/splash.png": {
+			"sdcard": false
+		},
+		"/pines/racer2/src.pines": {
+			"sdcard": false
+		},
+		"/pines/racer2/title.565": {
+			"sdcard": false
+		},
+		"/pines/racer2/title.png": {
+			"sdcard": false
+		},
+		"/pines/smash-it/splash.565": {
+			"sdcard": false
+		},
+		"/pines/smash-it/src.pines": {
+			"sdcard": false
+		},
+		"/pines/smash-it/title.565": {
+			"sdcard": false
+		},
+		"/pines/smash-it/src.pines~": {
+			"sdcard": false
+		},
+		"/pines/smash-it/#src.pines#": {
+			"sdcard": false
+		},
+		"/pines/smash-it/LEDArcade_SmastIt.png": {
 			"sdcard": false
 		}
 	},
