@@ -272,6 +272,15 @@ public:
                     strToken[pos++] = next;
                     read();
                 }while( (pos+1) < maxStrToken && !eof && isHexChar(next) );
+            }else if(next == 'b' || next == 'B'){
+                u32 pos = 1;
+                strToken[pos++] = next;
+                do {
+                    numToken <<= 1;
+                    numToken += next == '1';
+                    strToken[pos++] = next;
+                    read();
+                }while( (pos+1) < maxStrToken && !eof && (next == '0' || next == '1') );
             }
             return strHash;
         }

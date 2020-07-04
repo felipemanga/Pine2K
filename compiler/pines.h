@@ -83,9 +83,10 @@ struct Sym {
     bool isTemp(){
         return hash == 0;
     }
-    void unhitTemp(){
+    Sym& unhitTemp(){
         if(!hash)
             flags &= ~(1 << 1);
+        return *this;
     }
     Sym& hitTemp(){
         if(!hash)
@@ -177,24 +178,29 @@ public:
 
     void invalidate(cg::RegLow r){
         auto &c = reg[r.value - 1];
+        if(c.hold){
+            LOG("Invalidating held register\n");
+        }
         c.sym = ~u32{};
         c.age = 0;
         c.hold = 0;
     }
 
-    void assign(u32 symId, cg::RegLow r, bool hold = false){
+    bool assign(u32 symId, cg::RegLow r, bool hold = false){
         if(!isValid(r.value)){
             for(u32 i=0; i<maxReg; ++i){
                 if(reg[i].sym == symId){
                     invalidate(cg::RegLow(i+1));
                 }
             }
+            return false;
         }else{
             auto &c = reg[r.value - 1];
             c.sym = symId;
             c.age = maxAge++;
             c.hold = hold;
             useMap |= 1 << r.value;
+            return true;
         }
     }
 
@@ -238,14 +244,18 @@ public:
         return cg::RegLow(p+1);
     }
 
+    bool isLocked(cg::RegLow r){
+        return reg[r.value - 1].hold;
+    }
+
     void hold(cg::RegLow r){
         if(isValid(r.value))
-            reg[r.value - 1].hold++;
+            reg[r.value - 1].hold = 1;
     }
 
     void release(cg::RegLow r){
         if(isValid(r.value) && reg[r.value - 1].hold)
-            reg[r.value - 1].hold--;
+            reg[r.value - 1].hold = 0;
     }
 
     u32 getUseMap(){
@@ -487,7 +497,7 @@ class Pines {
                 }
             }
         } else {
-            for(u32 i = 1; i<4; ++i){
+            for(u32 i = 1; isScratchReg(i); ++i){
                 auto symId = regAlloc[cg::RegLow(i)];
                 if(symId != invalidSym){
                     symTable[symId].reg = invalidReg;
@@ -558,10 +568,12 @@ class Pines {
     }
 
 
-    Sym& load(u32 symId){
+    Sym &load(u32 symId){
         loadToRegister(symId, regAlloc[symId].value);
         return symTable[symId];
     }
+
+    void * (*allocator)(u32 size);
 
 public:
     Pines(Tokenizer& tok, CodeGen& cg, SymTable& symTable, ResTable& resTable, u32 dataSection) :
@@ -576,6 +588,10 @@ public:
              };
         regAlloc.init(this, onSpillCallback);
         clearHashCache();
+    }
+
+    void setAllocator(void *(*allocator)(u32)){
+        this->allocator = allocator;
     }
 
     const char *varName(){
@@ -717,7 +733,7 @@ public:
             auto baseId = symId;
             expression();
             if(!accept("]"_token)){
-                setError("Unexpected token");
+                setError("Unexpected token (not ])");
                 return;
             }
             u32 tmpId = createTmpSymbol();
@@ -1126,6 +1142,7 @@ public:
         u32 symId = findSymbol(token, scopeId);
         if(symId == invalidSym){
             symId = createSymbol(0);
+            symTable[symId].clearKCTV();
         }else{
             accept();
         }
@@ -1170,7 +1187,9 @@ public:
 
     void value(){
         bool requireCall = accept("new"_token);
-        if(token == "("_token){
+        if(token == "["_token){
+            arrayLiteral();
+        } else if(token == "("_token){
             prenExpression();
         } else if(accept("true"_token)){
             symId = createTmpSymbol();
@@ -1200,6 +1219,44 @@ public:
         }
     }
 
+    u32 arrayId = 0;
+    void arrayLiteral(){
+        if(!accept("["_token)){
+            setError("Unexpected token (not [)");
+            return;
+        }
+        auto ptr = reinterpret_cast<u32*>(0x20004000 + arrayId * 4);
+        u32 start = arrayId;
+        while(!error && tok.getClass() != TokenClass::Eof){
+            if(arrayId * 4 >= 0x800){
+                setError("Array too big");
+                return;
+            }
+            simpleExpression();
+            auto &sym = symTable[symId];
+            if(!sym.hasKCTV()){
+                setError("Invalid Array literal value");
+                return;
+            }
+            ptr[arrayId++] = sym.kctv;
+            sym.hitTemp();
+            if(!accept(","_token))
+                break;
+        }
+        if(!accept("]"_token)){
+            setError("Unexpected token (not ])");
+            return;
+        }
+        u32 byteSize = (arrayId - start) << 2;
+        // LOG("Creating array of size ", byteSize, "\n");
+        void *out = allocator(byteSize);
+        memcpy(out, ptr, byteSize);
+        arrayId = start;
+        u32 tmpId = createTmpSymbol();
+        symTable[tmpId].setKCTV(reinterpret_cast<uintptr_t>(out));
+        symId = tmpId;
+    }
+
     void stringLiteral(){
         u32 line = tok.getLine();
         u32 start = tok.getLocation();
@@ -1210,15 +1267,15 @@ public:
             hash = hash * 31 + tok.getText()[0];
             accept();
         }
-        File &file = resTable.write(hash);
-        if( file.tell() >= file.size() ){
+        File *file = resTable.write(hash);
+        if( file ){
             tok.setLocation(start - 3, line);
             accept();
             for(u32 i = 0; i < len; ++i){
-                file << tok.getText()[0];
+                (*file) << tok.getText()[0];
                 accept();
             }
-            file << '\0';
+            (*file) << '\0';
         }
         symId = createTmpSymbol();
         auto &sym = symTable[symId];
@@ -1228,7 +1285,7 @@ public:
     void callArgs(u32 &argc, u32 *argv){
         argc = 0;
         if(!accept("("_token)){
-            setError("callArgs: Unexpected token");
+            setError("callArgs: Unexpected token (not ()");
             return;
         }
         if(accept(")"_token))
@@ -1244,7 +1301,7 @@ public:
         if(error)
             return;
         if(!accept(")"_token)){
-            setError("callArgs 2: Unexpected token");
+            setError("callArgs 2: Unexpected token (not ))");
             return;
         }
     }
@@ -1327,6 +1384,22 @@ public:
         symId = tmpId;
     }
 
+    void callLength(u32 argc, u32 *argv){
+        if(argc != 1){
+            setError("length expects 1 argument");
+            return;
+        }
+        auto tmpId = createTmpSymbol();
+        auto reg = regAlloc[tmpId];
+        auto &tmp = symTable[tmpId];
+        tmp.clearKCTV();
+        tmp.reg = reg.value;
+        auto &sym = load(argv[0]);
+        codegen.SUBS(reg, cg::RegLow(sym.reg), 4);
+        codegen.LDRH(reg, reg, 0);
+        symId = tmpId;
+    }
+
     bool callIntrinsic(u32 symId, u32 argc, u32* argv){
         auto &sym = symTable[symId];
         switch(sym.hash){
@@ -1337,6 +1410,7 @@ public:
                 callPressed(argc, argv);
                 return true;
             }
+        case "length"_token: callLength(argc, argv); return true;
         default: return false;
         }
     }
@@ -1389,8 +1463,12 @@ public:
             regAlloc.assign(argv[i], cg::RegLow(i), true);
         }
         if(argc > 0){
-            for(u32 i=0; i<argc; ++i)
+            for(u32 i=0; i<argc; ++i){
+                if(i && !regAlloc.isLocked(cg::RegLow(i))){
+                    LOG("BUG\n");
+                }
                 symTable[argv[i]].hitTemp();
+            }
             commitScratch();
             load(symId);
             loadToRegister(argv[0], 0);
@@ -1400,6 +1478,10 @@ public:
         }
         {
             auto &call = symTable[symId];
+            if(call.reg < argc){
+                setError("REGALLOC BUG\n");
+                return;
+            }
             codegen.BLX(cg::RegLow(call.reg));
         }
         for(u32 i=1; i<argc; ++i)
@@ -1454,7 +1536,8 @@ public:
             if(evictId != invalidSym && evictId != symId){
                 auto &evict = symTable[evictId];
                 boolCast(evict);
-                spill(evict, evictId);
+                commit(evict, evictId);
+                evict.reg = invalidReg;
             }
         }
         
@@ -1467,6 +1550,8 @@ public:
                 boolCast(sym);
                 codegen.MOVS(cg::RegLow(reg), cg::RegLow(sym.reg));
             }
+            if(reg)
+                sym.reg = reg;
             return;
         }
         if(reg)
@@ -1520,7 +1605,7 @@ public:
             sym.reg = reg;
             sym.setDirty();
         }
-        sym.type = evict.type;
+        sym.type = (evict.type != Sym::UNCOMPILED) ? evict.type : Sym::FUNCTION;
         symId = id;
     }
 
@@ -1556,7 +1641,9 @@ public:
             if(accept("="_token)){
                 simpleExpression();
                 assign(id);
-                symTable[id].setMemInit();
+                auto &sym = symTable[id];
+                if(sym.hasKCTV())
+                    sym.setMemInit();
             }else if(scopeId != 0){
                 symTable[id].setDirty();
             }
@@ -1567,7 +1654,7 @@ public:
     void deadBlock(){
         LOGD("Dead block\n");
         if(!accept("{"_token)){
-            setError("1 Unexpected token");
+            setError("1 Unexpected token (not {)");
             return;
         }
         u32 depth = 1;
@@ -1582,7 +1669,7 @@ public:
         u32 endLabel = nextLabel++;
         while(!error) {
             if(!accept("if"_token)){
-                setError("2 Unexpected token");
+                setError("2 Unexpected token (not if)");
                 return;
             }
 
@@ -1625,7 +1712,7 @@ public:
 
     void doStatement(){
         if(!accept("do"_token)){
-            setError("do: Unexpected token");
+            setError("do: Unexpected token (not do)");
             return;
         }
 
@@ -1643,7 +1730,7 @@ public:
             return;
 
         if(!accept("while"_token)){
-            setError("do: Unexpected token");
+            setError("do: Unexpected token (not while)");
             return;
         }
 
@@ -1661,7 +1748,7 @@ public:
 
     void whileStatement(){
         if(!accept("while"_token)){
-            setError("while: Unexpected token");
+            setError("while: Unexpected token (not while)");
             return;
         }
         u32 lblTest = nextLabel++;
@@ -1689,7 +1776,7 @@ public:
 
     void forStatement(){
         if(!accept("for"_token) || !accept("("_token)){
-            setError("for: Unexpected token");
+            setError("for: Unexpected token (not for and not ()");
             return;
         }
         LOGD("For Init\n");
@@ -1785,7 +1872,6 @@ public:
 
     void forInStatement(){
         u32 valueId = symId;
-
         value();
 
         if(!accept(")"_token)){
@@ -1805,7 +1891,7 @@ public:
         {
             load(arrId);
             assign(itId);
-            auto &it = symTable[itId];
+            auto &it = load(itId).unhitTemp();
             auto &max = symTable[maxId];
             max.setKCTV(-4);
             load(maxId);
@@ -1814,9 +1900,9 @@ public:
             codegen.LDRI(cg::RegLow(it.reg), 0);
             codegen.CMP(cg::RegLow(max.reg), 0);
             max.setDirty();
+            it.setDirty();
             preserveFlags++;
-            commitAll();
-            invalidateRegisters();
+            flush();
             preserveFlags--;
             codegen.B(cg::EQ, lblBreak);
             codegen[lblTest];
@@ -1826,23 +1912,21 @@ public:
         {
             auto valReg = regAlloc[valueId];
             auto &value = symTable[valueId];
-            auto &it = load(itId);
-            it.unhitTemp();
-            codegen.ADDS(valReg, cg::RegLow(it.reg), 1);
+            auto &it = load(itId).unhitTemp();
+            codegen.MOVS(valReg, cg::RegLow(it.reg));
+            codegen.ADDS(cg::RegLow(it.reg), cg::RegLow(it.reg), 1);
             it.setDirty();
-            value.reg = it.reg;
-            it.reg = valReg.value;
             spill(it, itId);
-            regAlloc.assign(valueId, cg::RegLow(value.reg));
+            value.reg = valReg.value;
             value.setDirty();
             value.clearKCTV();
         }
-
 
         if(token == "{"_token)
             block();
         else
             statements();
+
         {
             flush();
             codegen[lblContinue];
@@ -1915,7 +1999,7 @@ public:
             return;
         }
         if(!accept("return"_token)){
-            setError("Unexpected token");
+            setError("Unexpected token (not return)");
             return;
         }
         if(accept(";"_token) || (token == "}"_token) || isKeyword()){
@@ -1956,7 +2040,7 @@ public:
 
     void block(){
         if(!accept("{"_token)){
-            setError("3 Unexpected token");
+            setError("3 Unexpected token (not {)");
             return;
         }
 
@@ -1965,44 +2049,14 @@ public:
         }
 
         if(!accept("}"_token)){
-            setError("4 Unexpected token");
+            setError("4 Unexpected token (not })");
             return;
         }
-    }
-
-    void declFunction(){
-        u32 location = tok.getLocation();
-        u32 line = tok.getLine();
-        if(!accept("function"_token) || !isName()){
-            setError("Unexpected token");
-            return;
-        }
-
-        u32 fsymId = findOrCreateSymbol(0);
-        auto& sym = symTable[fsymId];
-        sym.clearKCTV();
-        sym.type = Sym::UNCOMPILED;
-        sym.kctv = location;
-        sym.line = line;
-
-        if(!accept("("_token)){
-            setError("Unexpected token");
-            return;
-        }
-
-        u32 depth=1;
-        while(tok.getClass() != TokenClass::Eof && !error && depth){
-            if(accept("("_token)) depth++;
-            else if(accept(")"_token)) depth--;
-            else accept();
-        }
-
-        deadBlock();
     }
 
     void declArgs(){
         if(!accept("("_token)){
-            setError("Unexpected token");
+            setError("declArgs: Unexpected token (not ()");
             return;
         }
         if(accept(")"_token)){
@@ -2035,7 +2089,7 @@ public:
         }
 
         if(!accept(")"_token)){
-            setError("Unexpected token");
+            setError("Unexpected token (not ))");
         }
     }
 
@@ -2082,6 +2136,36 @@ public:
         codegen.link();
     }
 
+    void declFunction(){
+        u32 location = tok.getLocation();
+        u32 line = tok.getLine();
+        if(!accept("function"_token) || !isName()){
+            setError("Unexpected token (not function and not name)");
+            return;
+        }
+
+        u32 fsymId = findOrCreateSymbol(0);
+        auto& sym = symTable[fsymId];
+        sym.type = Sym::UNCOMPILED;
+        sym.line = line;
+        sym.init = location;
+        sym.clearKCTV();
+
+        if(!accept("("_token)){
+            setError("declFunc: Unexpected token (not ()");
+            return;
+        }
+
+        u32 depth=1;
+        while(tok.getClass() != TokenClass::Eof && !error && depth){
+            if(accept("("_token)) depth++;
+            else if(accept(")"_token)) depth--;
+            else accept();
+        }
+
+        deadBlock();
+    }
+
     void parseFunction(u32 baseAddress, u32 symId){
         using namespace cg;
         auto& sym = symTable[symId];
@@ -2095,10 +2179,10 @@ public:
         returnLabel = nextLabel++;
         scopeSize = 0;
         u32 addr = baseAddress + codegen.tell() | 1;
+        tok.setLocation(sym.init, sym.line);
         sym.setMemInit(addr);
         sym.type = Sym::FUNCTION;
         beginFunction();
-        tok.setLocation(sym.kctv, sym.line);
         sym.kctv = addr;
         clearAllKCTV();
 

@@ -12,7 +12,9 @@ using PB = Pokitto::Buttons;
 
 Audio::Sink<4, PROJ_AUD_FREQ> audio;
 
-void (*onUpdate)() = +[](){};
+void nopUpdate(){}
+void (*onUpdate)() = nopUpdate;
+
 pines::ResTable resTable(1024);
 char projectName[16];
 
@@ -128,6 +130,25 @@ void setMirror(int m){ mirror = m; }
 void setFlip(int f){ flip = f; }
 
 void sprite(int x, int y, const uint8_t *ptr){
+    if(!ptr)
+        return;
+    auto iptr = reinterpret_cast<uintptr_t>(ptr);
+    if( iptr > 0x10000000 && iptr < 0x10008000 && (iptr & 0x3) == 0){
+        auto len = (reinterpret_cast<uint32_t*>(iptr)[-1]&0xFFFF) * 4;
+        auto recolor = ptr[0];
+        auto bpp = ptr[1];
+        auto s = ptr[2] * ptr[3];
+        if(bpp == 8);
+        else if(bpp == 4) s >>= 1;
+        else if(bpp == 1) s >>= 3;
+        else goto defaultDraw;
+        if( (s + 4) != len) goto defaultDraw;
+        PD::setColorDepth(bpp);
+        PD::drawSprite(x, y, ptr + 2, flip, mirror, PD::color + recolor);
+        PD::setColorDepth(8);
+        return;
+    }
+defaultDraw:
     PD::drawSprite(x, y, ptr, flip, mirror, PD::color);
 }
 
@@ -136,7 +157,6 @@ void highscore(pines::u32 score){
     if(score <= projectScore)
         return;
     projectScore = score;
-
     char path[64];
     projectFilePath("highscore", path);
     File file;
@@ -228,9 +248,93 @@ void splash(int cx, int cy, pines::u32 hash){
         LOG("Could not open:\n[", (const char*) path, "]\n");
 }
 
-pines::u32 readFile(pines::u32 nameHash, char *ptr){
+uint32_t indexSize;
+File *resourceFile = nullptr;
+struct {
+    pines::u32 hash;
+    pines::u32 offset;
+} hashCache[16];
+
+pines::u32 loadRes(pines::u32 nameHash){
     char path[128];
     pathFromHash(nameHash, path, 128);
+    if(!resourceFile)
+        resourceFile = new File();
+    if(!resourceFile->openRO(path)){
+        return 0;
+    }
+    indexSize = resourceFile->read<uint32_t>();
+    return 1;
+}
+
+pines::u32 readResource(pines::u32 hash, char *ptr){
+    using namespace pines;
+
+    if(!resourceFile || !hash)
+        return 0;
+
+    auto& file = *resourceFile;
+    auto& cache = hashCache[hash & 0xF];
+    if(cache.hash == hash){
+        file.seek(cache.offset);
+    } else {
+        u32 c = 0;
+        u32 low = 0;
+        u32 hi = indexSize - 1;
+        while(low <= hi){
+            u32 mid = (hi + low) >> 1;
+            u32 pivot = file.seek(4 + mid * 8).read<u32>();
+            c++;
+            // if(c > 50);
+            if(pivot == hash){
+                u32 offset = file.read<u32>();
+                file.seek(offset);
+                cache.hash = hash;
+                cache.offset = offset;
+                break;
+            }else if(low == hi){
+                char buf[33];
+                stringFromHash(hash, buf, 32);
+                LOG("Missing resource ", (const char*) buf, "\n");
+                return 0;
+            }
+            if(pivot < hash){
+                low = mid + 1;
+            }else{
+                hi = mid - 1;
+            }
+        }
+    }
+
+    auto len = file.read<pines::u32>();
+    bool created = false;
+    if(!ptr){
+        created = true;
+        u32 size = len;
+        if(size & 3) size += 4;
+        ptr = reinterpret_cast<char*>(pines::arrayCtr(size >> 2));
+    }
+
+    // u32 read =
+        file.read(ptr, len);
+    // LOG("Read resource ", hash, " to ", (void*)ptr, " ", len, " ", read, "\n");
+    return reinterpret_cast<u32>(ptr);
+}
+
+pines::u32 readFile(pines::u32 nameHash, char *ptr){
+    if(resourceFile){
+        auto ret = readResource(nameHash, ptr);
+        if(ret)
+            return ret;
+    }
+
+    char path[128];
+    pathFromHash(nameHash, path, 128);
+
+    auto len = strlen(path);
+    if(strcmp(path + len - 3, "res") == 0)
+        return loadRes(nameHash);
+
     File file;
     if(!file.openRO(path)){
         return 0;
@@ -248,7 +352,7 @@ pines::u32 read(pines::u32 key, pines::u32 a, pines::u32 b, pines::u32 c){
     switch(key){
     case pines::hash("\"TILE"): return reinterpret_cast<pines::u32>(PD::getTile(a, b));
     case pines::hash("\"COLOR"): return PD::getTileColor(a, b);
-    default: return readFile(key, reinterpret_cast<char*>(a));
+    default: break;
     }
     LOG("Invalid read\n");
     return 0;
@@ -266,6 +370,20 @@ void tile(pines::u32 x, pines::u32 y, pines::u32 t){
         PD::drawTile(x, y, ptr, PD::color, w == PROJ_TILE_W * 2);
     }else{
         PD::drawColorTile(x, y, t);
+    }
+}
+
+void fillTiles(pines::u32 color){
+    static constexpr int screenWidth = PROJ_LCDWIDTH;
+    static constexpr int screenHeight = PROJ_LCDHEIGHT;
+    constexpr uint32_t tileW = POK_TILE_W;
+    constexpr uint32_t tileH = POK_TILE_H;
+    constexpr uint32_t mapW = screenWidth / tileW + 2;
+    constexpr uint32_t mapH = screenHeight / tileH + 2;
+    for(auto y=0; y<mapH; ++y){
+        for(auto x=0; x<mapW; ++x){
+            PD::drawColorTile(x, y, color);
+        }
     }
 }
 
@@ -344,11 +462,17 @@ void exec(){
 
 
 void run(const char *path){
+    if(resourceFile){
+        delete resourceFile;
+        resourceFile = nullptr;
+    }
+
     pines::SimplePine pine(path, resTable);
     pine.setConstant("print", print);
     pine.setConstant("console", console);
     pine.setConstant("printNumber", printNumber);
     pine.setConstant("tile", tile);
+    pine.setConstant("fill", fillTiles);
     pine.setConstant("tileshift", tileshift);
     pine.setConstant("sprite", sprite);
     pine.setConstant("splash", splash);
@@ -364,6 +488,7 @@ void run(const char *path){
     pine.setConstant("justPressed", justPressed);
     pine.setConstant("time", PC::getTime);
     pine.setConstant("io", read);
+    pine.setConstant("file", readFile, true);
     pine.setConstant("music", music);
     pine.setConstant("highscore", highscore);
     pine.setConstant("exit", exitPine);
@@ -373,8 +498,10 @@ void run(const char *path){
                               });
     if(pine.compile()){
         pine.run();
-        onUpdate = pine.getCall<void()>("update") ?: onUpdate;
+        onUpdate = pine.getCall<void()>("update");
     }
+    if(!onUpdate)
+        onUpdate = nopUpdate;
 }
 
 void pickProject();

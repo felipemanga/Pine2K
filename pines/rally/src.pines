@@ -1,0 +1,90 @@
+const minX = 6, maxX = 22;
+const minY = 0, maxY = 20;
+const boardWidth = maxX - minX;
+const boardHeight = maxY - minY;
+const heart = builtin("sHeart");
+const lvl = builtin("sLvl");
+const pts = builtin("sPts");
+const ledOFF = builtin("shape2");
+const ledON = builtin("sBtn");
+const bgColor = 113;
+const maxLen = 100;
+const car = 0b010111010111;
+const bgColor = 49;
+const stripeColor = 53;
+const playerY = boardHeight - 5;
+var playerColor = 53;
+var playerX;
+var level = 0;
+var score = 0;
+var prevScore = 0;
+var lives = 3;
+var stepTime;
+var frame = 0;
+
+window(44, 0, 176, 176);
+tileshift(2, 0);
+reset();
+
+function reset(){
+    playerX = boardWidth / 2 - 1;
+}
+
+function drawCar(sx, sy, c){
+    var collision = 0;
+    sx += minX;
+    sy += minY;
+    var i = 3 * 4;
+    color(c);
+    for(var y = 0; y < 4; ++y){
+        for(var x = 0; x < 3; ++x){
+            if(car & (1 << --i)){
+                var fx = x + sx;
+                var fy = y + sy;
+                var prevColor = io("COLOR", fx, fy);
+                collision += (prevColor != bgColor) && (prevColor != stripeColor);
+                tile(fx, fy, ledOFF);
+            }
+        }
+    }
+    return collision;
+}
+
+function hud(){
+    color(47);
+    sprite(50, 165, lvl);
+    cursor(60, 165);
+    printNumber(level + 1);
+    sprite(110, 165, pts);
+    cursor(120, 165);
+    printNumber(score);
+    color(0);
+    for(var i=0; i<lives; ++i)
+        sprite(80 + (i * 8), 165, heart);
+}
+
+function update(){
+    frame++;
+    for(var y = minY; y < maxY; ++y){
+        color(bgColor);
+        for(var x = minX + 1; x < (maxX - 1); ++x){
+            tile(x, y, ledOFF);
+        }
+        if( (y - frame & 3) == 0 ) color(stripeColor);
+        tile(minX, y, ledOFF);
+        tile(maxX - 1, y, ledOFF);
+    }
+    hud();
+    if((time() - stepTime) < delay)
+        return;
+    stepTime = time();
+    playerX -= pressed("LEFT");
+    playerX += pressed("RIGHT");
+    if(playerX < 0) playerX = 0;
+    if(playerX >= (boardWidth - 3)) playerX = boardWidth - 3;
+    if(drawCar(playerX, playerY, playerColor) != 0){
+        playerColor = 172;
+    } else {
+        playerColor = 53;
+    }
+}

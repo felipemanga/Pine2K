@@ -18,9 +18,10 @@ namespace pines {
         void reset(){
             resCount = 0;
             fileSize = 0;
+            file.seek(0);
         }
 
-        File& write(u32 key){
+        File *write(u32 key){
             if(file.tell() > fileSize)
                 fileSize = file.tell();
             u32 pos = resCount;
@@ -29,31 +30,32 @@ namespace pines {
                 file.seek(i * 8);
                 u32 otherKey = file.read<u32>();
                 if(otherKey == key){
-                    u32 oldPos = file.read<u32>();
-                    return at(oldPos);
+                    // u32 oldPos = file.read<u32>();
+                    // return at(oldPos);
+                    return nullptr;
                 }
-                if(otherKey > key){
-                    pos = i;
-                    break;
-                }
+                // if(otherKey > key){
+                //     pos = i;
+                //     break;
+                // }
             }
             
             u32 pk = key;
             u32 po = offset;
-            for(u32 i = pos; i < resCount; ++i){
-                file.seek(i * 8);
-                u32 ok = file.read<u32>();
-                u32 oo = file.read<u32>();
-                file.seek(i * 8);
-                file << pk << po;
-                pk = ok;
-                po = oo;
-            }
+            // for(u32 i = pos; i < resCount; ++i){
+            //     file.seek(i * 8);
+            //     u32 ok = file.read<u32>();
+            //     u32 oo = file.read<u32>();
+            //     file.seek(i * 8);
+            //     file << pk << po;
+            //     pk = ok;
+            //     po = oo;
+            // }
 
             file.seek(resCount++ * 8);
             file << pk << po;
             file.seek(offset);
-            return file;
+            return &file;
         }
 
         File& at(u32 offset){

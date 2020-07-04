@@ -97,6 +97,9 @@ function hud(){
 }
 
 function update(){
+    if(pressed("C"))
+        exit();
+
     hud();
 
     if(inputEnabled){
@@ -209,8 +212,6 @@ function update(){
     color(snakeColor-1);
     plot(end, ledON);
 
-    // if(!dead){
     color(appleColor);
     tile(ax + minX, ay + minY, ledON);
-    // }
 }

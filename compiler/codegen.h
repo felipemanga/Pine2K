@@ -360,7 +360,7 @@ namespace cg {
 
         void link(){
             if(error){
-                LOG(error);
+                LOG(error, "\n");
                 while(true);
                 return;
             }

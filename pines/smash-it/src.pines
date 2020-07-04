@@ -14,7 +14,6 @@ var levels = new Array(27);
 var paddleX, bx, by, vx, vy;
 var dead, won = 0;
 var stepTime;
-var delay = 0;
 var level = 0;
 var score = 0;
 var prevScore = 0;
@@ -49,8 +48,11 @@ function reset(){
         exit();
         return;
     }
+    score = prevScore;
     if(level > 15){
         paddleSize = 2;
+    } else if(level > 30){
+        paddleSize = 1;
     }
     color(bgColor);
     for(y = 0; y < boardHeight; ++y){
@@ -60,7 +62,6 @@ function reset(){
     }
     remaining = 0;
     pattern(0, -3, levels[level & 0xF]);
-    delay = 30; // 100 - (level * 5);
     bx = (boardWidth / 2) << 8;
     by = (boardHeight - 2) << 8;
     paddleX = boardWidth / 2;
@@ -92,7 +93,6 @@ function pattern(x, y, img){
         }
         img += w;
     }
-    console(remaining);
 }
 
 function hud(){
@@ -109,8 +109,8 @@ function hud(){
 }
 
 function hitBlock(){
-    var tx = (bx >> 8) + minX;
-    var ty = (by >> 8) + minY;
+    var tx = ((bx + 128) >> 8) + minX;
+    var ty = ((by + 128) >> 8) + minY;
     var c = io("COLOR", tx, ty);
     if(c == bgColor)
         return false;
@@ -121,12 +121,16 @@ function hitBlock(){
         ++score;
     } else {
         by -= 255;
-        vx = ((bx >> 8) - paddleX) * random(4, 8) * 3;
+        vx += ((bx >> 8) - paddleX) * random(4, 8) << 3;
+        vx >>= 1;
     }
     return true;
 }
 
 function update(){
+    if(pressed("C"))
+        exit();
+
     hud();
 
     if(pressed("LEFT")){
@@ -140,7 +144,7 @@ function update(){
             paddleX = (boardWidth - 1) - paddleSize;
         }
     }else if(pressed("UP") && (vy == 0)){
-        vy = -(random(10, 20) + level) * 7;
+        vy = -(20 + level) * 7;
     }
 
     for(var i=0; i<boardWidth; ++i){
@@ -154,39 +158,38 @@ function update(){
         tile(i + minX, minY + (boardHeight - 1), led);
     }
 
-    color(bgColor);
-    tile((bx >> 8) + minX, (by >> 8) + minY, ledOFF);
-
     by += vy;
     if( by < 0 ){
         by = 0;
         vy = -vy;
-    } else if( by >= (boardHeight << 8) ){
+    } else if( ((by + 128) >> 8) >= boardHeight ){
         --lives;
-        score = prevScore;
         reset();
         return;
     }
     if(hitBlock())
         vy = -vy;
-
     bx += vx;
     if( bx < 0 ){
         bx = 0;
         vx = -vx;
-    } else if( bx >= (boardWidth << 8) ){
+    } else if( bx >= ((boardWidth - 1) << 8) ){
         bx = ((boardWidth - 1) << 8);
-        vx = -vx;
+        if(vx > 0)
+            vx = -vx;
     }
     if(hitBlock())
         vx = -vx;
 
     color(ballColor);
-    tile((bx >> 8) + minX, (by >> 8) + minY, ledON);
+    sprite((bx >> 5) + (minX << 3), (by >> 5) + (minY << 3), ledON);
 
     if(remaining <= 0){
         prevScore = score;
-        level++;
+        ++level;
+        if(!(level % 5) && (lives < 3)){
+            ++lives;
+        }
         reset();
     }
 }

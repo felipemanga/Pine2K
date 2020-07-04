@@ -13,6 +13,7 @@ namespace pines {
         u16 next;
         bool mark;
         bool hasPtrs;
+        bool isRoot;
 
         operator u32* (){
             return data;
@@ -23,19 +24,21 @@ namespace pines {
         }
 
         void uncompress(u16 v){
-            v &= 0x7FFE;
+            v &= 0x7FFC;
             data = v ? reinterpret_cast<u32*>(0x10000000 + v) : nullptr;
             if(data){
                 u32 compressed = data[-1];
                 length = static_cast<u16>(compressed);
-                next = static_cast<u16>(compressed >> 16) & 0x7FFE;
+                next = static_cast<u16>(compressed >> 16) & 0x7FFC;
                 mark = compressed >> 31;
                 hasPtrs = compressed & (1 << 16);
+                isRoot = compressed & (1 << 17);
             } else {
                 length = 0;
                 next = 0;
                 mark = false;
                 hasPtrs = false;
+                isRoot = false;
             }
         }
 
@@ -45,13 +48,14 @@ namespace pines {
         }
 
         u16 *nextPtr(){
-            return reinterpret_cast<u16*>(data - 1);
+            return reinterpret_cast<u16*>(data - 1) + 1;
         }
 
         void update(){
             u32 compressed = length;
             compressed |= hasPtrs << 16;
-            compressed |= u32(next & 0x7FFE) << 16;
+            compressed |= isRoot << 17;
+            compressed |= u32(next & 0x7FFC) << 16;
             compressed |= u32(mark) << 31;
             data[-1] = compressed;
         }
@@ -66,25 +70,26 @@ namespace pines {
 
     inline void gc(u32 **stackBottom, u32 **stackTop, u32 **globals, u32 globalCount){
         u32 markCount = 0;
-
+        // LOG("GC\n");
         for(ArrayHeader array(arrays); array; ++array){
-            array.mark = false;
+            array.mark = array.isRoot;
             array.hasPtrs = false;
             u32 *begin = array.data;
             u32 *end = array.data + array.length;
-            for(auto stack = stackBottom; stack < stackTop;  ++stack){
-                if(*stack >= begin && *stack < end){
-                    markCount++;
-                    array.mark = true;
-                    // LOG("Stack Hit ", stack - stackBottom,  array.mark, " ", begin, ">=", *stack, "<", end, "\n");
-                    break;
+            // if(array.isRoot) LOG("Skip root ", array.data, "\n");
+            if(!array.mark){
+                for(auto stack = stackBottom; stack < stackTop;  ++stack){
+                    if(*stack >= begin && *stack < end){
+                        // LOG("Stack Hit ", stack - stackBottom,  array.mark, " ", begin, ">=", *stack, "<", end, "\n");
+                        array.mark = true;
+                        break;
+                    }
                 }
             }
             if(!array.mark){
                 for(u32 global = 0; global < globalCount; ++global){
                     auto value = globals[global];
                     if(value >= begin && value < end){
-                        markCount++;
                         array.mark = true;
                         // LOG("Static Hit ", stackTop,  array.mark, " ", begin, " ", end, "\n");
                         break;
@@ -97,6 +102,7 @@ namespace pines {
                     break;
                 }
             }
+            markCount += array.mark;
             array.update();
         }
 
@@ -133,7 +139,8 @@ namespace pines {
                 prev = array.nextPtr();
             }else{
                 cc++;
-                *prev = array.next & 0x7FFE;
+                *prev = (*prev & 2) | (array.next & 0x7FFC);
+                // LOG("Collect ", array.data - 1, "\n");
                 delete[] (array.data - 1);
             }
         }
@@ -149,9 +156,11 @@ namespace pines {
 
         auto array = new u32[size + 1];
         if(!array){
-            LOG("Out of Memory\n");
+            LOG("Out of Memory ", size, "\n");
             while(true);
         }
+
+        // LOG("Alloc ", size, " @ ", array, "\n");
 
         array[0] = size | (u32(arrays) << 16);
         arrays = reinterpret_cast<uintptr_t>(array + 1) - 0x10000000;
@@ -184,8 +193,12 @@ namespace pines {
             resTable(resTable),
             pines(tok, cg, symTable, resTable, dataSection)
             {
-                setConstant("Array", arrayCtr);
-                MemOps::set(reinterpret_cast<void*>(dataSection), 0, 0x800);
+                pines.setAllocator([](u32 size) -> void * {
+                                       u32 *array = arrayCtr(size >> 2);
+                                       array[-1] |= 1 << 17;
+                                       return array;
+                                   });
+                setConstant("Array", arrayCtr, true);
                 MemOps::set(reinterpret_cast<void*>(codeSection), 0, 0x800);
             }
 
@@ -236,6 +249,8 @@ namespace pines {
             if(pines.getError())
                 return false;
 
+            MemOps::set(reinterpret_cast<void*>(dataSection), 0, 0x800);
+
             // u32 init = cg.tell();
             // if(init & 0x2){
             //     cg.NOP();
@@ -273,8 +288,7 @@ namespace pines {
                 id++;
             }
 
-            LOG("PROGMEM: ", (cg.tell() * 100) / 2048, "%\n");
-            LOG("GCOUNT: ", len, "\n");
+            LOG("PROGMEM: ", cg.tell(), " bytes (", (cg.tell() * 100) / 2048, "%) used.\n");
 
             // writer.seek(0x10 >> 1, true);
             // writer << u16(init)
