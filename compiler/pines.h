@@ -286,6 +286,8 @@ class Pines {
     SymTable& symTable;
     ResTable& resTable;
 
+    u32 lblBreak = ~u32{}, lblContinue = ~u32{};
+
     void toBranch(u32 label){
         auto& sym = symTable[symId].hitTemp();
         if(sym.type < Sym::CAST_EQ){
@@ -323,6 +325,8 @@ class Pines {
 
     bool isKeyword(){
         const u32 keywords[] = {
+            "switch"_token,
+            "let"_token,
             "var"_token,
             "function"_token,
             "return"_token,
@@ -330,7 +334,9 @@ class Pines {
             "else"_token,
             "while"_token,
             "const"_token,
-            "for"_token
+            "for"_token,
+            "break"_token,
+            "continue"_token
         };
         for(u32 i=0; i<sizeof(keywords)/sizeof(keywords[0]); ++i){
             if(keywords[i] == token)
@@ -626,13 +632,17 @@ public:
         if(!isUnary) return;
         auto &sym = symTable[symId];
         if(sym.hasKCTV()){
+            u32 tmpId = createTmpSymbol();
+            auto &tmp = symTable[tmpId];
+            symId = tmpId;
+            sym.hitTemp();
             switch(op){
-            case "-"_token: sym.setKCTV(-sym.kctv); break;
-            case "+"_token: break;
-            case "!"_token: sym.setKCTV(!sym.kctv); break;
-            case "~"_token: sym.setKCTV(~sym.kctv); break;
-            case "++"_token: sym.setKCTV(sym.kctv+1); break;
-            case "--"_token: sym.setKCTV(sym.kctv-1); break;
+            case "-"_token: tmp.setKCTV(-sym.kctv); break;
+            case "+"_token: tmp.setKCTV(sym.kctv); break;
+            case "!"_token: tmp.setKCTV(!sym.kctv); break;
+            case "~"_token: tmp.setKCTV(~sym.kctv); break;
+            case "++"_token: sym.setKCTV(sym.kctv+1); tmp.setKCTV(sym.kctv); break;
+            case "--"_token: sym.setKCTV(sym.kctv-1); tmp.setKCTV(sym.kctv); break;
             default: setError("Unexpected operator"); break;
             }
         } else {
@@ -676,8 +686,15 @@ public:
             case "!"_token:
             {
                 u32 tmpId = createTmpSymbol();
-                assign(tmpId);
-                symTable[tmpId].type = Sym::CAST_NE;
+                auto reg = regAlloc[tmpId];
+                auto &sym = load(symId);
+                auto &tmp = symTable[tmpId];
+                codegen.SUBS(reg, cg::RegLow{sym.reg}, 0);
+                tmp.reg = reg.value;
+                tmp.clearKCTV();
+                tmp.setDirty();
+                tmp.type = Sym::CAST_NE;
+                symId = tmpId;
                 break;
             }
             default:
@@ -1678,17 +1695,17 @@ public:
                 return;
 
             u32 failLabel = nextLabel++;
-            // auto &sym = symTable[symId];
-            // if(sym.hasKCTV()){
-            //     sym.hitTemp();
-            //     if(sym.kctv){
-            //         statementOrBlock();
-            //         return;
-            //     }else if (token == "{"_token){
-            //         deadBlock();
-            //         return;
-            //     }
-            // }
+            auto &sym = symTable[symId];
+            if(sym.hasKCTV()){
+                sym.hitTemp();
+                if(sym.kctv){
+                    statementOrBlock();
+                    return;
+                }else if (token == "{"_token){
+                    deadBlock();
+                    return;
+                }
+            }
 
             toBranch(failLabel);
             statementOrBlock();
@@ -1711,6 +1728,9 @@ public:
     }
 
     void doStatement(){
+        auto prevlblBreak = this->lblBreak;
+        auto prevlblContinue = this->lblContinue;
+
         if(!accept("do"_token)){
             setError("do: Unexpected token (not do)");
             return;
@@ -1719,6 +1739,9 @@ public:
         u32 lblTest = nextLabel++;
         u32 lblBreak = nextLabel++;
         u32 lblNext = nextLabel++;
+
+        this->lblBreak = lblBreak;
+        this->lblContinue = lblTest;
 
         flush();
 
@@ -1744,9 +1767,14 @@ public:
         codegen.B(lblNext);
         codegen[lblBreak];
 
+        this->lblBreak = prevlblBreak;
+        this->lblContinue = prevlblContinue;
     }
 
     void whileStatement(){
+        auto prevlblBreak = this->lblBreak;
+        auto prevlblContinue = this->lblContinue;
+
         if(!accept("while"_token)){
             setError("while: Unexpected token (not while)");
             return;
@@ -1767,14 +1795,24 @@ public:
                 return;
             }
         }
+
+        this->lblBreak = lblBreak;
+        this->lblContinue = lblTest;
+
         toBranch(lblBreak);
         statementOrBlock();
         flush();
         codegen.B(lblTest);
         codegen[lblBreak];
+
+        this->lblBreak = prevlblBreak;
+        this->lblContinue = prevlblContinue;
    }
 
     void forStatement(){
+        auto lblBreak = this->lblBreak;
+        auto lblContinue = this->lblContinue;
+
         if(!accept("for"_token) || !accept("("_token)){
             setError("for: Unexpected token (not for and not ()");
             return;
@@ -1796,6 +1834,9 @@ public:
             setError("for: Expected ;");
             return;
         }
+
+        this->lblBreak = lblBreak;
+        this->lblContinue = lblContinue;
     }
 
     void forOfStatement(){
@@ -1812,6 +1853,9 @@ public:
         u32 lblContinue = nextLabel++;
         u32 lblEnter = nextLabel++;
         u32 lblBreak = nextLabel++;
+
+        this->lblBreak = lblBreak;
+        this->lblContinue = lblContinue;
 
         u32 arrId = symId;
         u32 itId = createTmpSymbol();
@@ -1884,6 +1928,9 @@ public:
         u32 lblEnter = nextLabel++;
         u32 lblBreak = nextLabel++;
 
+        this->lblBreak = lblBreak;
+        this->lblContinue = lblContinue;
+
         u32 arrId = symId;
         u32 itId = createTmpSymbol();
         u32 maxId = createTmpSymbol();
@@ -1948,6 +1995,9 @@ public:
         u32 lblContinue = nextLabel++;
         u32 lblEnter = nextLabel++;
         u32 lblBreak = nextLabel++;
+
+        this->lblBreak = lblBreak;
+        this->lblContinue = lblContinue;
 
         LOGD("For Condition\n");
         flush();
@@ -2022,9 +2072,31 @@ public:
             block();
     }
 
+    void breakStatement(){
+        accept();
+        if(lblBreak == ~u32{}){
+            setError("Break outside loop");
+            return;
+        }
+        flush();
+        codegen.B(cg::Label(lblBreak));
+    }
+
+    void continueStatement(){
+        accept();
+        if(lblContinue == ~u32{}){
+            setError("Continue outside loop");
+            return;
+        }
+        flush();
+        codegen.B(cg::Label(lblContinue));
+    }
+
     void statements(){
         switch(token){
         case ";"_token: break;
+        case "break"_token: breakStatement(); break;
+        case "continue"_token: continueStatement(); break;
         case "debugger"_token: accept(); codegen.BKPT(0); break;
         case "var"_token: accept(); varDecl(); break;
         case "const"_token: accept(); constDecl(); break;

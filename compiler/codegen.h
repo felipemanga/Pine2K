@@ -341,6 +341,11 @@ namespace cg {
         u32 regHasConst = 0;
         u32 regConst[15];
 
+        u32 clearRegs(){
+            regHasConst = 0;
+            return 0;
+        }
+
     public:
         CodeGen(CodeWriter& writer) : writer(writer) {}
 
@@ -473,6 +478,7 @@ namespace cg {
             symRef(SYMBOL, op);                                 \
             if(writer.full()) error = "Writer Full";            \
             else writer << op;                                  \
+            regHasConst = 0;                                    \
         }
 
         using RL = RegLow;
@@ -584,7 +590,7 @@ namespace cg {
 
         OP32L(BL, (Label label), label, (0b1111'0000'0000'0000'1101'0000'0000'0000))
 
-        OP16(BLX, (RL rm), (0b0100'0111'1000'0000 | s(rm, 3)))
+        OP16(BLX, (RL rm), (0b0100'0111'1000'0000 | s(rm, 3) | clearRegs()))
 
         OP16(BX, (RX rm), (0b0100'0111'0000'0000 | s(rm, 3)))
 

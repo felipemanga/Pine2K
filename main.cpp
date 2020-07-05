@@ -10,7 +10,8 @@ using PD = Pokitto::Display;
 using PC = Pokitto::Core;
 using PB = Pokitto::Buttons;
 
-Audio::Sink<4, PROJ_AUD_FREQ> audio;
+Audio::Sink<2, PROJ_AUD_FREQ> audio;
+constexpr auto version = 1;
 
 void nopUpdate(){}
 void (*onUpdate)() = nopUpdate;
@@ -52,12 +53,6 @@ void projectFilePath(const char *file, char *path){
     str = file;
     while(*str) *out++ = *str++;
     *out++ = 0;
-}
-
-void music(pines::u32 hash){
-    char path[64];
-    pathFromHash(hash, path, sizeof(path));
-    Audio::play((const char*)path);
 }
 
 void printNumber(pines::s32 value){
@@ -348,10 +343,46 @@ pines::u32 readFile(pines::u32 nameHash, char *ptr){
     return reinterpret_cast<pines::u32>(ptr);
 }
 
+Audio::Note note;
+
+void music(pines::u32 hash){
+    char path[64];
+    pathFromHash(hash, path, sizeof(path));
+    auto m = Audio::play<0>((const char*)path);
+    if(m){
+        m->setLoop(note._loop);
+    }
+}
+
+void sound(pines::u32 num, pines::u32 osc){
+    note.noteNumber(num);
+    note.play<1>(osc & 3);
+}
+
 pines::u32 read(pines::u32 key, pines::u32 a, pines::u32 b, pines::u32 c){
     switch(key){
+    case pines::hash("\"VERSION"): return version;
     case pines::hash("\"TILE"): return reinterpret_cast<pines::u32>(PD::getTile(a, b));
     case pines::hash("\"COLOR"): return PD::getTileColor(a, b);
+    case pines::hash("\"VOLUME"): if(a < 255) note.volume(a); return note._volume;
+    case pines::hash("\"OVERDRIVE"): if(a < 2) note.overdrive(a); return note._overdrive;
+    case pines::hash("\"LOOP"): if(a < 2) note.loop(a); return note._loop;
+    case pines::hash("\"ECHO"): if(a < 2) note.echo(a); return note._echo;
+    case pines::hash("\"ATTACK"): if(a <= 0xFFFF) note.attack(a); return note._attack;
+    case pines::hash("\"DECAY"): if(a <= 0xFFFF) note.decay(a); return note._decay;
+    case pines::hash("\"SUSTAIN"): if(a <= 0xFFFF) note.sustain(a); return note._sustain;
+    case pines::hash("\"RELEASE"): if(a <= 0xFFFF) note.release(a); return note._release;
+    case pines::hash("\"MAXBEND"): if(int(a) <= 0xFFFF) note.maxbend(a); return note._maxbend;
+    case pines::hash("\"BENDRATE"): if(int(a) <= 0xFFFF) note.release(a); return note._release;
+    case pines::hash("\"DURATION"): if(a) note.duration(a << 3); return note._duration >> 3;
+    case pines::hash("\"WAVE"):
+        switch(a){
+        case pines::hash("\"SQUARE"): note.wave(1); break;
+        case pines::hash("\"SAW"): note.wave(2); break;
+        case pines::hash("\"TRIANGLE"): note.wave(3); break;
+        case pines::hash("\"NOISE"): note.wave(4); break;
+        }
+        return note._wave;
     default: break;
     }
     LOG("Invalid read\n");
@@ -462,6 +493,7 @@ void exec(){
 
 
 void run(const char *path){
+    note = Audio::Note().duration(500).wave(1).loop(false);
     if(resourceFile){
         delete resourceFile;
         resourceFile = nullptr;
@@ -490,6 +522,7 @@ void run(const char *path){
     pine.setConstant("io", read);
     pine.setConstant("file", readFile, true);
     pine.setConstant("music", music);
+    pine.setConstant("sound", sound);
     pine.setConstant("highscore", highscore);
     pine.setConstant("exit", exitPine);
     pine.setConstant("exec", +[](pines::u32 hash){
@@ -527,25 +560,36 @@ void updateMenu(){
         resTable.reset();
         prevselection = -1;
         draw = true;
-        PD::bgcolor = 209;
-        PD::color = 88;
+
+        {
+            File theme;
+            if(theme.openRO("pines/theme")){
+                theme >> PD::bgcolor >> PD::color;
+            }else{
+                PD::bgcolor = 209;
+                PD::color = 88;
+            }
+        }
+
         PD::enableDirectPrinting(true);
 
-        Directory directory;
-        directory.open("pines");
-        while(
-            auto info = directory.read(
-            [](FileInfo &info){
-                if(!(info.fattrib & AM_DIR))
-                    return false;
-                setProjectName(info.name());
-                char srcpath[64];
-                projectFilePath("src.pines", srcpath);
-                return !!File{}.openRO(srcpath);
-            })
-            ){
-            strcpy(projectNames + projectCount * 16, info->name());
-            projectCount++;
+        {
+            Directory directory;
+            directory.open("pines");
+            while(
+                auto info = directory.read(
+                    [](FileInfo &info){
+                        if(!(info.fattrib & AM_DIR))
+                            return false;
+                        setProjectName(info.name());
+                        char srcpath[64];
+                        projectFilePath("src.pines", srcpath);
+                        return !!File{}.openRO(srcpath);
+                    })
+                ){
+                strcpy(projectNames + projectCount * 16, info->name());
+                projectCount++;
+            }
         }
 
         while(PB::aBtn());
@@ -567,6 +611,9 @@ void updateMenu(){
         draw = true;
         PD::bgcolor = xorshift32(0, 255);
         PD::color = xorshift32(0, 255);
+        File theme;
+        theme.openRW("pines/theme", true, false);
+        theme << PD::bgcolor << PD::color;
     }
 
     if(PB::aBtn()){
@@ -585,7 +632,7 @@ void updateMenu(){
         return;
 
     if((prevselection >> 2) != (selection >> 2)){
-        fillRect(41, 220 - 82, 0, 176, 0);
+        fillRect(40, 220 - 80, 0, 176, 0);
         for(int i = 0; i < 4; ++i){
             auto dirOffset = selection >> 2 << 2;
             auto projectNumber = dirOffset + i;

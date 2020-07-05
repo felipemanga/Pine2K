@@ -28,6 +28,7 @@ var lives = 3;
 
 window(44, 0, 176, 176);
 tileshift(2, 0);
+io("DURATION", 50);
 reset();
 
 function reset(){
@@ -194,6 +195,8 @@ function update(){
             growing = false;
             if(++begin == maxLen) begin = 0;
             currentLen--;
+        }else{
+            sound(40, 0);
         }
     }
 
@@ -203,8 +206,11 @@ function update(){
             color(random(0, 255));
         if(snake[i] == snake[end]){
             delay = 20;
-            dead = true;
-            pattern(4, 7, "sSkull");
+            if(!dead){
+                dead = true;
+                sound(60, 0);
+                pattern(4, 7, "sSkull");
+            }
         }
         plot(i, ledON);
         if(++i == maxLen) i = 0;

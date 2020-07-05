@@ -63,10 +63,10 @@
 * length( array )
   Returns the length of the given array.
   
-* PEEK( pointer )
+* peek( pointer )
   Reads a byte from the given pointer.
   
-* POKE( pointer, byte value )
+* poke( pointer, byte value )
   Writes the given byte to the given pointer.
 
 * music( string raw file name )
@@ -81,5 +81,15 @@
 * exec( string pine file name )
   Terminates the current script and loads another, within the same project.
 
-* io()
-  Used for reading files/resources/etc.
+* file(string file name, array or null)
+  Reads the file into the given array. Creates an array if one isn't given. 
+  Returns the same array or null if the file could not be read.
+  
+* file(string file name)
+  Mounts the given res file for reading with the other file function.
+
+* io(string key, ... )
+  Reads/Writes from the given source. Number of arguments varies depending on the key.
+  - io("COLOR", number x, number y): returns the color of the tile at the given X/Y coordinates.
+  - io("TILE", number x, number y): returns the bitmap of the tile at the given X/Y coordinates.
+  More keys will be added in the future.

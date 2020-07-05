@@ -124,6 +124,9 @@ function hitBlock(){
         vx += ((bx >> 8) - paddleX) * random(4, 8) << 3;
         vx >>= 1;
     }
+    io("VOLUME", 127);
+    io("DURATION", 100);
+    sound(random(44, 47));
     return true;
 }
 

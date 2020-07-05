@@ -60,7 +60,7 @@
 
 // Choose whether to enable sound or not.
 // Optional. Can be 0 or 1. Default is 1.
-#define PROJ_ENABLE_SOUND 0
+#define PROJ_ENABLE_SOUND 1
 
 
 // Enable Pokitto::Sound::playSFX
@@ -95,7 +95,7 @@
 
 // Enable Synth
 // Optional. Can be 0 or 1. Default is 0.
-#define PROJ_ENABLE_SYNTH 0
+#define PROJ_ENABLE_SYNTH 1
 
 
 // ---- SECTION: TASMODE ----
