@@ -253,7 +253,8 @@ public:
                 if(next == '='){
                     strToken[1] = next;
                     read();
-                    return ((5381 * 31) + *s) * 31 + '=';
+                    if(*s != '=')
+                        return ((5381 * 31) + *s) * 31 + '=';
                 }
                 if(next == *s){
                     strToken[1] = next;

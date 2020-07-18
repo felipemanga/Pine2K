@@ -150,7 +150,7 @@ namespace pine {
     inline u32* arrayCtr(u32 size){
         auto stackTop = reinterpret_cast<u32 **>(0x10008000);
         u32** stackBottom;
-        __asm__ volatile("mov %[stackBottom], SP":[stackBottom] "+l" (stackBottom)::"r4", "r5", "r6", "r7", "r8");
+        __asm__ volatile("mov %[stackBottom], SP":[stackBottom] "+l" (stackBottom)::"r4", "r5", "r6", "r7");
         auto globals = reinterpret_cast<u32 **>(0x20004000);
         gc(stackBottom, stackTop, globals, globalCount);
 

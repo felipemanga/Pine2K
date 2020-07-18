@@ -168,12 +168,12 @@ public:
     void *data;
 
     bool isValid(u32 reg){
-        return reg > 0 && reg <= maxReg;
+        return reg < maxReg;
     }
 
     void verify(u32 sym, u32 r){
-        if(isValid(r) && reg[r-1].sym != sym && reg[r-1].sym != ~u32{}){
-            LOG("BUG: Sym ", sym, " references reg ", r, ", assigned to ", reg[r-1].sym, "\n");
+        if(isValid(r) && reg[r].sym != sym && reg[r].sym != ~u32{}){
+            LOG("BUG: Sym ", sym, " references reg ", r, ", assigned to ", reg[r].sym, "\n");
         }
     }
 
@@ -191,7 +191,7 @@ public:
     void invalidate(cg::RegLow r){
         if(!isValid(r.value))
             return;
-        auto &c = reg[r.value - 1];
+        auto &c = reg[r.value];
         if(c.hold){
             LOG("Invalidating held register ", r.value, "\n");
         }
@@ -203,13 +203,13 @@ public:
     bool assign(u32 symId, cg::RegLow r, bool hold = false){
         for(u32 i=0; i<maxReg; ++i){
             if(reg[i].sym == symId){
-                invalidate(cg::RegLow(i+1));
+                invalidate(cg::RegLow(i));
             }
         }
         if(!isValid(r.value)){
             return false;
         }else{
-            auto &c = reg[r.value - 1];
+            auto &c = reg[r.value];
             c.sym = symId;
             c.age = maxAge++;
             c.hold = hold;
@@ -219,26 +219,24 @@ public:
     }
 
     u32 operator [] (cg::RegLow r){
-        return isValid(r.value) ? reg[r.value - 1].sym : ~u32{};
+        return isValid(r.value) ? reg[r.value].sym : ~u32{};
     }
 
     cg::RegLow operator [] (u32 symId){
         u32 p = 0;
-        for(; p<maxReg - 1; ++p){
+        for(; p<maxReg; ++p){
             if(reg[p].sym == symId){
                 reg[p].age = maxAge++;
-                return cg::RegLow(p + 1);
+                return cg::RegLow(p);
             }
             if(!reg[p].hold) break;
         }
         u32 age = reg[p].age;
-        for(u32 i = p + 1; i < maxReg; ++i){
-        // auto sp = p;
-        // for(u32 i = maxReg - 1; i > sp; --i){
+        for(u32 i = maxReg - 1, pp = p; i > pp; --i){
             auto& r = reg[i];
             if(r.sym == symId){
                 r.age = maxAge++;
-                return cg::RegLow(i+1);
+                return cg::RegLow(i);
             }
             if(!r.hold && r.age < age){
                 age = r.age;
@@ -254,25 +252,25 @@ public:
         reg[p].hold = 0;
         reg[p].sym = symId;
         reg[p].age = maxAge++;
-        useMap |= 1 << (p + 1);
-        if(isLocked(cg::RegLow(p+1))){
+        useMap |= 1 << p;
+        if(isLocked(cg::RegLow(p))){
             LOG("RA BUG\n");
         }
-        return cg::RegLow(p+1);
+        return cg::RegLow(p);
     }
 
     bool isLocked(cg::RegLow r){
-        return reg[r.value - 1].hold;
+        return reg[r.value].hold;
     }
 
     void hold(cg::RegLow r){
         if(isValid(r.value))
-            reg[r.value - 1].hold = 1;
+            reg[r.value].hold = 1;
     }
 
     void release(cg::RegLow r){
-        if(isValid(r.value) && reg[r.value - 1].hold)
-            reg[r.value - 1].hold = 0;
+        if(isValid(r.value) && reg[r.value].hold)
+            reg[r.value].hold = 0;
     }
 
     u32 getUseMap(){
@@ -289,6 +287,8 @@ class Pine {
     static constexpr const u32 invalidSym = ~u32{};
     static constexpr const u16 invalidAddress = 0xFFFF;
     static constexpr const u8 invalidReg = 0xFF;
+    static constexpr const u32 tempReg = 7;
+    static constexpr const cg::RegLow Rt = cg::RegLow{tempReg};
     const u32 dataSection;
     Tokenizer& tok;
     const char *error = nullptr;
@@ -407,13 +407,13 @@ class Pine {
         cg::RegLow reg(sym.reg);
         switch(sym.type){
         case Sym::CAST_EQ:
-            codegen.SUBS(cg::R0, reg, 1);
-            codegen.SBCS(reg, cg::R0);
+            codegen.SUBS(Rt, reg, 1);
+            codegen.SBCS(reg, Rt);
             break;
 
         case Sym::CAST_NE:
-            codegen.RSBS(cg::R0, reg);
-            codegen.ADCS(reg, cg::R0);
+            codegen.RSBS(Rt, reg);
+            codegen.ADCS(reg, Rt);
             break;
 
 
@@ -454,7 +454,7 @@ class Pine {
         if(!regAlloc.isValid(sym.reg)){
             if(!sym.hasKCTV()){
                 LOGD("Sym has no reg and no kctv\n");
-                return false;
+                return invalidReg;
             }
             auto reg = regAlloc[symId];
             sym.reg = reg.value;
@@ -470,8 +470,8 @@ class Pine {
         if(!sym.isInStack()){
             u32 bank = (sym.address >> 5) << 7;
             u32 offset = (sym.address & 0x1F) << 2;
-            codegen.LDRI(cg::R0, dataSection + bank, preserveFlags);
-            codegen.STR(reg, cg::R0, offset);
+            codegen.LDRI(Rt, dataSection + bank, preserveFlags);
+            codegen.STR(reg, Rt, offset);
         }else{
             codegen.STR(reg, cg::SP, sym.address << 2);
         }
@@ -499,7 +499,7 @@ class Pine {
 
     void spillAll(){
         LOGD("Spill all\n");
-        for(u32 i = 1; i<RegAlloc::maxReg; ++i){
+        for(u32 i = 0; i<RegAlloc::maxReg; ++i){
             u32 symId = regAlloc[cg::RegLow(i)];
             if(symId == invalidSym) continue;
             spill(symTable[symId], symId);
@@ -515,7 +515,7 @@ class Pine {
         LOGD("Invalidating registers\n");
 
         if(all){
-            for(u32 i = 1; i<RegAlloc::maxReg; ++i){
+            for(u32 i = 0; i<RegAlloc::maxReg; ++i){
                 auto symId = regAlloc[cg::RegLow(i)];
                 if(symId != invalidSym){
                     symTable[symId].reg = invalidReg;
@@ -523,7 +523,7 @@ class Pine {
                 }
             }
         } else {
-            for(u32 i = 1; isScratchReg(i); ++i){
+            for(u32 i = 0; isScratchReg(i); ++i){
                 auto symId = regAlloc[cg::RegLow(i)];
                 if(symId != invalidSym){
                     symTable[symId].reg = invalidReg;
@@ -705,10 +705,10 @@ public:
                     auto &sym = symTable[symId];
                     auto reg = regAlloc[tmpId];
                     sym.clearDeref();
-                    loadToRegister(symId, 0);
-                    codegen.LDR(reg, cg::R0);
+                    loadToRegister(symId, tempReg);
+                    codegen.LDR(reg, Rt);
                     codegen.ADDS(reg, 1);
-                    codegen.STR(reg, cg::R0);
+                    codegen.STR(reg, Rt);
                     tmp.reg = reg.value;
                     tmp.clearKCTV();
                     symId = tmpId;
@@ -725,10 +725,10 @@ public:
                     auto &sym = symTable[symId];
                     auto reg = regAlloc[tmpId];
                     sym.clearDeref();
-                    loadToRegister(symId, 0);
-                    codegen.LDR(reg, cg::R0);
+                    loadToRegister(symId, tempReg);
+                    codegen.LDR(reg, Rt);
                     codegen.SUBS(reg, 1);
-                    codegen.STR(reg, cg::R0);
+                    codegen.STR(reg, Rt);
                     tmp.reg = reg.value;
                     tmp.clearKCTV();
                     symId = tmpId;
@@ -776,15 +776,15 @@ public:
                 auto &sym = symTable[symId];
                 auto reg = regAlloc[tmpId];
                 sym.clearDeref();
-                loadToRegister(symId, 0);
-                codegen.LDR(reg, cg::R0);
+                loadToRegister(symId, tempReg);
+                codegen.LDR(reg, Rt);
                 if(token == "++"_token){
                     codegen.ADDS(reg, 1);
-                    codegen.STR(reg, cg::R0);
+                    codegen.STR(reg, Rt);
                     codegen.SUBS(reg, 1);
                 }else{
                     codegen.SUBS(reg, 1);
-                    codegen.STR(reg, cg::R0);
+                    codegen.STR(reg, Rt);
                     codegen.ADDS(reg, 1);
                 }
                 tmp.reg = reg.value;
@@ -840,8 +840,8 @@ public:
                 auto reg = cg::RegLow(sym.reg);
                 spill(sym, symId);
                 regAlloc.assign(tmpId, cg::RegLow(reg));
-                codegen.LSLS(cg::R0, reg, 2);
-                codegen.ADDS(reg, cg::RegLow(base.reg), cg::R0);
+                codegen.LSLS(Rt, reg, 2);
+                codegen.ADDS(reg, cg::RegLow(base.reg), Rt);
                 tmp.reg = reg.value;
                 tmp.clearKCTV();
             }
@@ -1031,21 +1031,25 @@ public:
                 codegen.LDRI(cg::R2, reinterpret_cast<uintptr_t>(__aeabi_idiv));
             }
             regAlloc.hold(cg::R2);
+
             loadToRegister(symId, 1);
             regAlloc.assign(symId, cg::R1);
+
             loadToRegister(lsymId, 0);
+            regAlloc.assign(lsymId, cg::R0);
+
             codegen.BLX(cg::R2);
             regAlloc.release(cg::R2);
             invalidateRegisters(false);
+
             if(doAssign) tmpId = lsymId;
-            auto reg = regAlloc[tmpId];
-            if(op == "%"_token){
-                if(reg.value != 1)
-                    codegen.MOVS(reg, cg::R1);
-            }else codegen.MOVS(reg, cg::R0);
             auto &tmp = symTable[tmpId];
+            tmp.reg = op == "%"_token;
             tmp.clearKCTV();
-            tmp.reg = reg.value;
+            regAlloc.assign(tmpId, cg::RegLow(tmp.reg));
+
+            symTable[symId].hitTemp();
+            symTable[lsymId].hitTemp();
             symId = tmpId;
             return;
         }
@@ -1206,7 +1210,7 @@ public:
         sym.type = Sym::S32;
         sym.setDirty();
         sym.setKCTV(0);
-        regAlloc.assign(id, cg::R0);
+        regAlloc.assign(id, cg::RegLow{invalidReg});
         return id;
     }
 
@@ -1495,13 +1499,13 @@ public:
         default: break;
         }
         sym.hitTemp();
-        codegen.LDRI(cg::R0, 0xA0000020);
+        codegen.LDRI(Rt, 0xA0000020);
         u32 tmpId = createTmpSymbol();
         auto reg = regAlloc[tmpId];
         auto &tmp = symTable[tmpId];
         tmp.clearKCTV();
         tmp.reg = reg.value;
-        codegen.LDRB(reg, cg::R0, off);
+        codegen.LDRB(reg, Rt, off);
         symId = tmpId;
     }
 
@@ -1591,7 +1595,7 @@ public:
             }
         }
 
-        for(u32 i=1; i<argc; ++i){
+        for(u32 i=0; i<argc; ++i){
             loadToRegister(argv[i], i);
             regAlloc.assign(argv[i], cg::RegLow(i), true);
         }
@@ -1604,7 +1608,6 @@ public:
             }
             commitScratch();
             load(symId);
-            loadToRegister(argv[0], 0);
         }else{
             commitScratch();
             load(symId);
@@ -1618,15 +1621,15 @@ public:
             }
             codegen.BLX(cg::RegLow(call.reg));
         }
-        for(u32 i=1; i<argc; ++i)
+        for(u32 i=0; i<argc; ++i)
             regAlloc.release(cg::RegLow(i));
         invalidateRegisters(false);
         this->symId = symId = createTmpSymbol();
-        auto reg = regAlloc[symId];
         auto& sym = symTable[symId];
-        sym.reg = reg.value;
+        sym.setDirty();
         sym.clearKCTV();
-        codegen.MOVS(reg, cg::R0);
+        sym.reg = 0;
+        regAlloc.assign(symId, cg::R0);
     }
 
     void simpleExpression(){
@@ -1691,7 +1694,7 @@ public:
                 sym.reg = reg;
             return;
         }
-        if(reg)
+        if(reg != tempReg)
             sym.reg = reg;
         if(sym.hasKCTV()){
             codegen.LDRI(cg::RegLow(reg), sym.kctv, preserveFlags);
@@ -2261,9 +2264,8 @@ public:
             return;
         }
         u32 argc = 0;
-        u32 sym0 = invalidSym;
         do {
-            if(argc == 8){
+            if(argc == 7){
                 setError("Too many arguments");
                 return;
             }
@@ -2272,19 +2274,9 @@ public:
             auto &sym = symTable[id];
             sym.clearKCTV();
             sym.setDirty();
-            if(sym0 == invalidSym){
-                sym0 = id;
-            } else {
-                regAlloc.assign(id, cg::RegLow(++argc));
-                sym.reg = argc;
-            }
+            sym.reg = argc;
+            regAlloc.assign(id, cg::RegLow(argc++));
         }while(accept(","_token));
-
-        if(sym0 != invalidSym){
-            auto reg = regAlloc[sym0];
-            symTable[sym0].reg = reg.value;
-            codegen.MOVS(reg, cg::R0);
-        }
 
         if(!accept(")"_token)){
             setError("Unexpected token (not ))");
@@ -2344,6 +2336,10 @@ public:
 
         u32 fsymId = findOrCreateSymbol(0);
         auto& sym = symTable[fsymId];
+        if(sym.type == Sym::UNCOMPILED){
+            setError("Function redefinition");
+            return;
+        }
         sym.type = Sym::UNCOMPILED;
         sym.line = line;
         sym.init = location;
