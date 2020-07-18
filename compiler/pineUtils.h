@@ -4,7 +4,7 @@
 
 #include <File>
 
-namespace pines {
+namespace pine {
 
     using u32 = std::uint32_t;
     using s32 = std::int32_t;

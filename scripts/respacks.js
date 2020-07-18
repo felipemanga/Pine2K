@@ -20,9 +20,9 @@ function hash(str){
 APP.getPalette(pal=>{
     palette = pal;
     if(pal){
-        (dir("pines") || [])
-            .forEach(project => (dir(`pines/${project}`) || [])
-                     .forEach(pack => start(`pines/${project}/${pack}`, pack)));
+        (dir("pine-2k") || [])
+            .forEach(project => (dir(`pine-2k/${project}`) || [])
+                     .forEach(pack => start(`pine-2k/${project}/${pack}`, pack)));
     }
 });
 
@@ -134,31 +134,15 @@ function optimize256(entry){
 function optimize16(minC, entry){
     let out = [];
     let inp = entry.img;
+    minC--;
     for(let i=0; i<inp.length - 2; ++i){
         let c = inp[i + 2];
         if(c) c -= minC;
-        if(i&1) out[i>>1] = c;
-        else out[i>>1] |= c << 4;
+        if(i&1) out[i>>1] |= c;
+        else out[i>>1] = c << 4;
     }
     entry.img = [minC, 4, inp[0], inp[1], ...out];
 }
-
-/* * /
-function optimize1(minC, entry){
-    let out = [];
-    let inp = entry.img;
-
-    for(let i=0; i<(inp.length - 2) >> 3; ++i)
-        out[i] = 0;
-
-    for(let i=0; i<(inp.length - 2); ++i){
-        let c = inp[i + 2];
-        let bit = 7 - (i & 0x7);
-        if(c) out[i>>3] |= 1 << bit;
-    }
-    entry.img = [minC, 1, inp[0], inp[1], ...out];
-}
-/*/
 
 function optimize1(minC, entry){
     let out = [];
@@ -180,7 +164,7 @@ function optimize1(minC, entry){
     }
     entry.img = [minC, 1, w, inp[1], ...out];
 }
-/* */
+
 function convert(img, xb, yb, xe, ye){
     let bpp = 8;
     let len, bytes, data = img.data;

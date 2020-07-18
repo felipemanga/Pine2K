@@ -10,16 +10,16 @@ let imageCount = 0;
 start();
 
 function start(){
-    (dir("pines").filter( path=>path.indexOf(".") == -1))
+    (dir("pine-2k").filter( path=>path.indexOf(".") == -1))
     .forEach(project=>{
-        promises.push(...(dir("pines/" + project)||[])
+        promises.push(...(dir("pine-2k/" + project)||[])
             .filter( file=>/\.png$/i.test(file) )
             .map( (file) => {
-            return readImage(`pines/${project}/${file}`)
+            return readImage(`pine-2k/${project}/${file}`)
                 .then( image => {
                 let img = convert(image, 0, 0, image.width, image.height);
                 fs.writeFileSync(
-                    `${DATA.projectPath}/pines/${project}/${file.replace(/\..*$/, "")}.565`,
+                    `${DATA.projectPath}/pine-2k/${project}/${file.replace(/\..*$/, "")}.565`,
                     Uint16Array.from(img)
                 );
                 return true;
@@ -44,6 +44,11 @@ function convert(img, xb, yb, xe, ye){
             let R = (data[i++] / 255.0 * 0x1F) | 0;
             let G = (data[i++] / 255.0 * 0x3F) | 0;
             let B = (data[i++] / 255.0 * 0x1F) | 0;
+            let A = data[i++];
+            if( A < 128 ){
+                R = B = 0x1F;
+                G = 0;
+            }
             let C = (R<<11) + (G<<5) + B;
             out.push(C);
         }

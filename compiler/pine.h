@@ -12,7 +12,7 @@ extern "C" {
     _div __aeabi_uidivmod(int, int);
 }
 
-namespace pines {
+namespace pine {
 
 struct Node {
     enum Type {
@@ -49,6 +49,12 @@ struct Sym {
         CAST_GE,
     } type = U32;
 
+    bool isCalled(){
+        return flags & 1;
+    }
+    void setCalled(){
+        flags |= 1 << 0;
+    }
     bool isInStack(){
         return (scopeId != 0) || isTemp();
     }
@@ -165,6 +171,12 @@ public:
         return reg > 0 && reg <= maxReg;
     }
 
+    void verify(u32 sym, u32 r){
+        if(isValid(r) && reg[r-1].sym != sym && reg[r-1].sym != ~u32{}){
+            LOG("BUG: Sym ", sym, " references reg ", r, ", assigned to ", reg[r-1].sym, "\n");
+        }
+    }
+
     template<typename Type>
     void init(Type *data, void (*spill)(Type *data, u32 sym)){
         this->data = reinterpret_cast<void*>(data);
@@ -177,9 +189,11 @@ public:
     }
 
     void invalidate(cg::RegLow r){
+        if(!isValid(r.value))
+            return;
         auto &c = reg[r.value - 1];
         if(c.hold){
-            LOG("Invalidating held register\n");
+            LOG("Invalidating held register ", r.value, "\n");
         }
         c.sym = ~u32{};
         c.age = 0;
@@ -187,12 +201,12 @@ public:
     }
 
     bool assign(u32 symId, cg::RegLow r, bool hold = false){
-        if(!isValid(r.value)){
-            for(u32 i=0; i<maxReg; ++i){
-                if(reg[i].sym == symId){
-                    invalidate(cg::RegLow(i+1));
-                }
+        for(u32 i=0; i<maxReg; ++i){
+            if(reg[i].sym == symId){
+                invalidate(cg::RegLow(i+1));
             }
+        }
+        if(!isValid(r.value)){
             return false;
         }else{
             auto &c = reg[r.value - 1];
@@ -241,6 +255,9 @@ public:
         reg[p].sym = symId;
         reg[p].age = maxAge++;
         useMap |= 1 << (p + 1);
+        if(isLocked(cg::RegLow(p+1))){
+            LOG("RA BUG\n");
+        }
         return cg::RegLow(p+1);
     }
 
@@ -268,7 +285,7 @@ public:
 };
 
 template <typename CodeGen, typename SymTable = ia::InfiniteArray<Sym, 16>>
-class Pines {
+class Pine {
     static constexpr const u32 invalidSym = ~u32{};
     static constexpr const u16 invalidAddress = 0xFFFF;
     static constexpr const u8 invalidReg = 0xFF;
@@ -451,8 +468,10 @@ class Pines {
         }
         LOGD("COMMIT ", symId, "\n");
         if(!sym.isInStack()){
-            codegen.LDRI(cg::R0, dataSection + (sym.address << 2), preserveFlags);
-            codegen.STR(reg, cg::R0, 0);
+            u32 bank = (sym.address >> 5) << 7;
+            u32 offset = (sym.address & 0x1F) << 2;
+            codegen.LDRI(cg::R0, dataSection + bank, preserveFlags);
+            codegen.STR(reg, cg::R0, offset);
         }else{
             codegen.STR(reg, cg::SP, sym.address << 2);
         }
@@ -468,6 +487,7 @@ class Pines {
     }
 
     bool spill(Sym& sym, u32 symId){
+        regAlloc.verify(symId, sym.reg);
         commit(sym, symId);
         if(regAlloc.isValid(sym.reg)){
             regAlloc.invalidate(cg::RegLow(sym.reg));
@@ -514,7 +534,7 @@ class Pines {
 
         // for(auto& sym : symTable){
         //     if(regAlloc.isValid(sym.reg)){
-        //         if(all || isScratchReg(sym.reg)){
+        //         if(isScratchReg(sym.reg)){
         //             regAlloc.invalidate(cg::RegLow(sym.reg));
         //             sym.reg = invalidReg;
         //             symTable.dirtyIterator();
@@ -528,6 +548,7 @@ class Pines {
         u32 id = 0;
         LOGD("commit all\n");
         for(auto& sym : symTable){
+            regAlloc.verify(id, sym.reg);
             if(commit(sym, id) != invalidReg){
                 symTable.dirtyIterator();
             }
@@ -539,6 +560,7 @@ class Pines {
         u32 id = 0;
         LOGD("commit scratch\n");
         for(auto& sym : symTable){
+            regAlloc.verify(id, sym.reg);
             if(isScratchReg(sym.reg) || !regAlloc.isValid(sym.reg) || sym.scopeId == 0){
                 if(commit(sym, id) != invalidReg)
                     symTable.dirtyIterator();
@@ -551,6 +573,7 @@ class Pines {
         u32 id = 0;
         // LOGD("Flushing\n");
         for(auto& sym : symTable){
+            regAlloc.verify(id, sym.reg);
             if(sym.scopeId == scopeId || sym.scopeId == 0){
                 spill(sym, id);
                 sym.clearKCTV();
@@ -565,6 +588,7 @@ class Pines {
     void clearAllKCTV(){
         u32 id = 0;
         for(auto& sym : symTable){
+            regAlloc.verify(id, sym.reg);
             if(sym.hasKCTV()){
                 sym.clearKCTV();
                 symTable.dirtyIterator();
@@ -582,14 +606,14 @@ class Pines {
     void * (*allocator)(u32 size);
 
 public:
-    Pines(Tokenizer& tok, CodeGen& cg, SymTable& symTable, ResTable& resTable, u32 dataSection) :
+    Pine(Tokenizer& tok, CodeGen& cg, SymTable& symTable, ResTable& resTable, u32 dataSection) :
         tok(tok),
         symTable(symTable),
         resTable(resTable),
         codegen(cg),
         dataSection(dataSection) {
         auto onSpillCallback =
-            +[](Pines *p, u32 sym){
+            +[](Pine *p, u32 sym){
                  p->spill(p->symTable[sym], sym);
              };
         regAlloc.init(this, onSpillCallback);
@@ -669,19 +693,50 @@ public:
                 auto reg = regAlloc[tmpId];
                 tmp.reg = reg.value;
                 tmp.clearKCTV();
+                tmp.setDirty();
                 codegen.MVNS(reg, cg::RegLow(sym.reg));
                 symId = tmpId;
                 break;
             }
             case "++"_token:
-                load(symId);
-                codegen.ADDS(cg::RegLow{sym.reg}, 1);
-                sym.setDirty();
+                if( symTable[symId].isDeref() ){
+                    auto tmpId = createTmpSymbol();
+                    auto &tmp = symTable[tmpId];
+                    auto &sym = symTable[symId];
+                    auto reg = regAlloc[tmpId];
+                    sym.clearDeref();
+                    loadToRegister(symId, 0);
+                    codegen.LDR(reg, cg::R0);
+                    codegen.ADDS(reg, 1);
+                    codegen.STR(reg, cg::R0);
+                    tmp.reg = reg.value;
+                    tmp.clearKCTV();
+                    symId = tmpId;
+                } else {
+                    load(symId);
+                    codegen.ADDS(cg::RegLow{sym.reg}, 1);
+                    sym.setDirty();
+                }
                 break;
             case "--"_token:
-                load(symId);
-                codegen.SUBS(cg::RegLow{sym.reg}, 1);
-                sym.setDirty();
+                if( symTable[symId].isDeref() ){
+                    auto tmpId = createTmpSymbol();
+                    auto &tmp = symTable[tmpId];
+                    auto &sym = symTable[symId];
+                    auto reg = regAlloc[tmpId];
+                    sym.clearDeref();
+                    loadToRegister(symId, 0);
+                    codegen.LDR(reg, cg::R0);
+                    codegen.SUBS(reg, 1);
+                    codegen.STR(reg, cg::R0);
+                    tmp.reg = reg.value;
+                    tmp.clearKCTV();
+                    symId = tmpId;
+                } else {
+                    load(symId);
+                    codegen.SUBS(cg::RegLow{sym.reg}, 1);
+                    sym.setDirty();
+                }
                 break;
             case "!"_token:
             {
@@ -715,7 +770,27 @@ public:
             auto token = this->token;
             accept();
             auto &sym = symTable[symId];
-            if(sym.hasKCTV()){
+            if(sym.isDeref()){
+                auto tmpId = createTmpSymbol();
+                auto &tmp = symTable[tmpId];
+                auto &sym = symTable[symId];
+                auto reg = regAlloc[tmpId];
+                sym.clearDeref();
+                loadToRegister(symId, 0);
+                codegen.LDR(reg, cg::R0);
+                if(token == "++"_token){
+                    codegen.ADDS(reg, 1);
+                    codegen.STR(reg, cg::R0);
+                    codegen.SUBS(reg, 1);
+                }else{
+                    codegen.SUBS(reg, 1);
+                    codegen.STR(reg, cg::R0);
+                    codegen.ADDS(reg, 1);
+                }
+                tmp.reg = reg.value;
+                tmp.clearKCTV();
+                symId = tmpId;
+            }else if(sym.hasKCTV()){
                 auto symId = this->symId;
                 auto kctv = sym.kctv;
                 sym.setKCTV(token == "++"_token ? (kctv + 1) : (kctv - 1));
@@ -832,11 +907,28 @@ public:
         if(error)
             return;
 
+        u32 derefId = invalidSym;
+        if(doAssign){
+            auto& sym = symTable[lsymId];
+            if(sym.isDeref()){
+                derefId = lsymId;
+                lsymId = createTmpSymbol();
+                auto reg = regAlloc[lsymId];
+                sym.clearDeref();
+                load(derefId).unhitTemp();
+                auto &vsym = symTable[lsymId];
+                vsym.reg = reg.value;
+                vsym.clearKCTV();
+                codegen.LDR(reg, cg::RegLow(sym.reg));
+            }
+        }
+
         auto &lsym = symTable[lsymId];
         auto &rsym = symTable[symId];
 
-        bool bothKnown = lsym.hasKCTV() && rsym.hasKCTV();
+        bool leftDeref = lsym.isDeref();
 
+        bool bothKnown = (lsym.hasKCTV()) && rsym.hasKCTV();
         if(bothKnown){
             bool matched = true;
             Sym::Type type = lsym.type;
@@ -940,6 +1032,7 @@ public:
             }
             regAlloc.hold(cg::R2);
             loadToRegister(symId, 1);
+            regAlloc.assign(symId, cg::R1);
             loadToRegister(lsymId, 0);
             codegen.BLX(cg::R2);
             regAlloc.release(cg::R2);
@@ -1056,7 +1149,13 @@ public:
         symId = renameSym;
 
         if(doAssign){
-            assign(lsymId);
+            if(derefId != invalidSym){
+                auto &ptr = load(derefId);
+                auto &val = load(symId).unhitTemp();
+                codegen.STR(cg::RegLow(val.reg), cg::RegLow(ptr.reg));
+            }else{
+                assign(lsymId);
+            }
         } else {
             auto &tmp = symTable[tmpId];
             auto &src = symTable[symId];
@@ -1070,7 +1169,9 @@ public:
 
     void purgeTemps(){
         clearHashCache();
+        u32 id = 0;
         for(auto& sym : symTable){
+            regAlloc.verify(id++, sym.reg);
             if(!sym.isTemp() && sym.scopeId){
                 sym.hash = 0;
             }
@@ -1086,6 +1187,7 @@ public:
         if(error) return invalidSym;
         u32 id = 0;
         for(auto& sym : symTable){
+            regAlloc.verify(id, sym.reg);
             if(sym.wasHit()){
                 LOGD("Tmp Recycle ", id, "\n");
                 break;
@@ -1113,6 +1215,7 @@ public:
         u32 id = 0;
         u32 evict = invalidSym;
         for(auto &sym : symTable){
+            regAlloc.verify(id, sym.reg);
             if(token == sym.hash && sym.scopeId == scopeId){
                 LOGD("redeclared variable ", name, " id:", id, "\n");
                 return id;
@@ -1139,6 +1242,7 @@ public:
         sym.flags = 0;
         sym.setKCTV(0);
         sym.clearDirty();
+        sym.type = Sym::Type::U32;
         LOGD("declared variable ", name, " ", id, " hash:", sym.hash, "\n");
         return id;
     }
@@ -1407,8 +1511,19 @@ public:
             return;
         }
         auto tmpId = createTmpSymbol();
-        auto reg = regAlloc[tmpId];
         auto &tmp = symTable[tmpId];
+
+        {
+            auto &sym = symTable[argv[0]];
+            if(sym.isInRange(0x10000000, 0x10008000)){
+                auto array = reinterpret_cast<u32*>(sym.kctv);
+                tmp.setKCTV(array[-1] & 0xFFFF);
+                symId = tmpId;
+                return;
+            }
+        }
+
+        auto reg = regAlloc[tmpId];
         tmp.clearKCTV();
         tmp.reg = reg.value;
         auto &sym = load(argv[0]);
@@ -1441,6 +1556,7 @@ public:
         bool isConstexpr;
         {
             auto &call = symTable[symId];
+            call.setCalled();
             if(call.hasKCTV() && call.kctv == 0)
                 call.clearKCTV();
             isConstexpr = argc <= 4 && call.isConstexpr();
@@ -1495,6 +1611,7 @@ public:
         }
         {
             auto &call = symTable[symId];
+
             if(call.reg < argc){
                 setError("REGALLOC BUG\n");
                 return;
@@ -1548,6 +1665,9 @@ public:
             return;
         }
 
+        if(regAlloc.isValid(reg))
+            regAlloc.invalidate(cg::RegLow(sym.reg));
+
         {
             u32 evictId = regAlloc[cg::RegLow(reg)];
             if(evictId != invalidSym && evictId != symId){
@@ -1567,7 +1687,7 @@ public:
                 boolCast(sym);
                 codegen.MOVS(cg::RegLow(reg), cg::RegLow(sym.reg));
             }
-            if(reg)
+            if(regAlloc.isValid(reg))
                 sym.reg = reg;
             return;
         }
@@ -1581,8 +1701,10 @@ public:
                 else sym.address = scopeSize++;
             }
             if(!sym.isInStack()){
-                codegen.LDRI(cg::RegLow(reg), dataSection + (sym.address << 2), preserveFlags);
-                codegen.LDR(cg::RegLow(reg), cg::RegLow(reg), 0);
+                u32 bank = (sym.address >> 5) << 7;
+                u32 offset = (sym.address & 0x1F) << 2;
+                codegen.LDRI(cg::RegLow(reg), dataSection + bank, preserveFlags);
+                codegen.LDR(cg::RegLow(reg), cg::RegLow(reg), offset);
             } else {
                 codegen.LDR(cg::RegLow(reg), cg::SP, sym.address << 2);
             }
@@ -1663,6 +1785,10 @@ public:
                     sym.setMemInit();
             }else if(scopeId != 0){
                 symTable[id].setDirty();
+            }
+            if(scopeId == 0){
+                auto &sym = symTable[id];
+                sym.setMemInit(sym.init);
             }
         }while(accept(","_token));
         symId = id;

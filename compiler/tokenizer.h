@@ -1,8 +1,8 @@
 #pragma once
 
-#include "./pinesUtils.h"
+#include "./pineUtils.h"
 
-namespace pines {
+namespace pine {
 
 enum class TokenClass {
     Number = 0,
@@ -205,6 +205,37 @@ public:
                 return "--"_token;
             }
             return "-"_token;
+        }
+
+        if(next == '>'){
+            tokClass = TokenClass::Operator;
+            read();
+            if(next == '>'){
+                strToken[1] = next;
+                read();
+                if(next == '>'){
+                    strToken[2] = next;
+                    read();
+                    if(next == '='){
+                        strToken[3] = next;
+                        read();
+                        return ">>>="_token;
+                    }
+                    return ">>>"_token;
+                }
+                if(next == '='){
+                    strToken[2] = next;
+                    read();
+                    return ">>="_token;
+                }
+                return ">>"_token;
+            }
+            if(next == '='){
+                strToken[1] = next;
+                read();
+                return ">="_token;
+            }
+            return ">"_token;
         }
 
         for(const char *s = "(){}[];,."; *s; ++s){

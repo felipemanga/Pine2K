@@ -1,9 +1,9 @@
 #pragma once
 
-#include "pines.h"
+#include "pine.h"
 #include <MemOps>
 
-namespace pines {
+namespace pine {
     
     inline u16 arrays = 0;
 
@@ -150,7 +150,7 @@ namespace pines {
     inline u32* arrayCtr(u32 size){
         auto stackTop = reinterpret_cast<u32 **>(0x10008000);
         u32** stackBottom;
-        __asm__ volatile("mov %[stackBottom], SP":[stackBottom] "+l" (stackBottom));
+        __asm__ volatile("mov %[stackBottom], SP":[stackBottom] "+l" (stackBottom)::"r4", "r5", "r6", "r7", "r8");
         auto globals = reinterpret_cast<u32 **>(0x20004000);
         gc(stackBottom, stackTop, globals, globalCount);
 
@@ -181,7 +181,7 @@ namespace pines {
         cg::CodeGen<decltype(writer)> cg;
         ia::InfiniteArray<Sym, 32> symTable;
         ResTable& resTable;
-        Pines<decltype(cg), decltype(symTable)> pines;
+        Pine<decltype(cg), decltype(symTable)> pine;
         bool wasInit = false;
 
     public:
@@ -189,11 +189,11 @@ namespace pines {
             tok(file),
             writer /* * / ("pine.bin"), /*/ (reinterpret_cast<void*>(codeSection)) /* */,
             cg(writer),
-            symTable("pines/symbols.tmp"),
+            symTable("pine-2k/symbols.tmp"),
             resTable(resTable),
-            pines(tok, cg, symTable, resTable, dataSection)
+            pine(tok, cg, symTable, resTable, dataSection)
             {
-                pines.setAllocator([](u32 size) -> void * {
+                pine.setAllocator([](u32 size) -> void * {
                                        u32 *array = arrayCtr(size >> 2);
                                        array[-1] |= 1 << 17;
                                        return array;
@@ -204,7 +204,7 @@ namespace pines {
 
         template<typename type>
         void setConstant(const char *name, type&& value, bool isConstexpr = false){
-            auto &sym = pines.createGlobal(name);
+            auto &sym = pine.createGlobal(name);
             sym.setConstant(value);
             if(isConstexpr)
                 sym.setConstexpr();
@@ -225,28 +225,28 @@ namespace pines {
             // cg.NOP();
             // cg.link();
 
-            pines.parseGlobal();
-            if(pines.getError())
+            pine.parseGlobal();
+            if(pine.getError())
                 return false;
 
             u32 uncompiled = ~u32{};
 
             do {
                 uncompiled = 0;
-                for(auto &sym : pines.symbols()){
+                for(auto &sym : pine.symbols()){
                     if(sym.type == Sym::UNCOMPILED){
                         break;
                     }
                     uncompiled++;
                 }
-                if(uncompiled < pines.symbols().size()){
-                    pines.parseFunction(codeSection, uncompiled);
+                if(uncompiled < pine.symbols().size()){
+                    pine.parseFunction(codeSection, uncompiled);
                 }else{
                     break;
                 }
-            } while(!pines.getError());
+            } while(!pine.getError());
 
-            if(pines.getError())
+            if(pine.getError())
                 return false;
 
             MemOps::set(reinterpret_cast<void*>(dataSection), 0, 0x800);
@@ -260,7 +260,7 @@ namespace pines {
             // init += codeSection;
 
             // u32 id = 0, len = 0;
-            // for(auto &sym : pines.symbols()){
+            // for(auto &sym : pine.symbols()){
             //     if(sym.memInit() && sym.init && sym.address != 0xFFFF){
             //         u32 address = dataSection + (sym.address << 2);
             //         LOG("MemInit ", id, " ", (void*) address, " ", (void *) sym.init, "\n");
@@ -272,18 +272,27 @@ namespace pines {
             // }
 
             u32 size = cg.tell();
-            if(size >= 2048){
+            if(size > 2048){
                 LOG("PROGMEM OVERFLOWED BY ", size - 2048, " BYTES\n");
                 return false;
             }
 
+            auto undefinedFunc = reinterpret_cast<u32>(+[](){
+                                                            LOG("ERROR: Undefined function call\n");
+                                                            while(true);
+                                                        });
+
             u32 id = 0, len = 0;
-            for(auto &sym : pines.symbols()){
-                if(sym.memInit() && sym.init && sym.address != 0xFFFF){
+            for(auto &sym : pine.symbols()){
+                if(sym.address != 0xFFFF){
                     auto address = reinterpret_cast<u32*>( dataSection + (sym.address << 2) );
                     // LOG("MemInit ", id, " ", (void*) address, " ", (void *) sym.init, "\n");
-                    *address = sym.init;
-                    len++;
+                    if(!sym.memInit() && sym.isCalled())
+                        sym.setMemInit(undefinedFunc);
+                    if(sym.memInit() && sym.init){
+                        *address = sym.init;
+                        len++;
+                    }
                 }
                 id++;
             }
@@ -296,7 +305,7 @@ namespace pines {
             //        << u16(len)
             //        << u16(len>>16);
 
-            globalCount = pines.getGlobalScopeSize();
+            globalCount = pine.getGlobalScopeSize();
 
             return true;
         }
@@ -305,7 +314,7 @@ namespace pines {
         func_t* getCall(const char *func){
             u32 h = hash(func);
             u32 id = 0;
-            for(auto &sym : pines.symbols()){
+            for(auto &sym : pine.symbols()){
                 if(sym.scopeId == 0 && sym.hash == h){
                     auto f = reinterpret_cast<func_t*>(uintptr_t(sym.init));
                     // LOGD("Found sym ", id, " at ", f, "\n");

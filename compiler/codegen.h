@@ -17,6 +17,7 @@
 namespace cg {
 
     using u32 = uint32_t;
+    using s32 = int32_t;
     using u16 = uint16_t;
 
     enum ConditionCode : u32 {
@@ -327,12 +328,18 @@ namespace cg {
         }
 
         template<typename OpType>
-        void symRef(Label lbl, OpType& op){
+        void symRef(Label lbl, OpType& op, u32 opMax){
             for(u32 i=0; i<symCount; ++i){
                 if( symTable[i].hash == lbl.value ){
                     op |= i;
+                    if(i > (~u32{} >> (32 - opMax))){
+                        error = "opmax";
+                    }
                     return;
                 }
+            }
+            if(symCount > (~u32{} >> (32 - opMax))){
+                error = "opmax";
             }
             op |= symCount;
             symTable[symCount++] = { lbl.value, ~u32{} };
@@ -377,6 +384,7 @@ namespace cg {
                 u16 op = writer.read();
                 u32 bits = 0;
                 u16 low = 0;
+                bool signedAddress = false;
 
                 LOGD(i << 1, " ", op, "\n");
 
@@ -400,7 +408,7 @@ namespace cg {
                     writer << u16(op);
                     LOGD("Found const ref\n");
                     continue;
-                } else if( (op & 0xF000) == 0b1101'0000'0000'0000 ) bits = 8;
+                } else if( (op & 0xF000) == 0b1101'0000'0000'0000 ){ bits = 8; signedAddress = true; }
                 else if( (op & 0xF800) == 0b1110'0000'0000'0000 ) bits = 11;
                 else if( (op & 0xF800) == 0b1111'0000'0000'0000 ){
                     low = writer.read();
@@ -421,7 +429,14 @@ namespace cg {
 
                 address = ((address >> 1) - (i + 2));
                 writer.seek(i);
+                u32 paddress = s32(address) < 0 ? -address : address;
+                if(signedAddress) paddress <<= 1;
+
                 if(low){
+                    if(paddress > 0x7fffff){
+                        error = "Out of range";
+                        LOGD("ADDR: ", (void*)address, "\n");
+                    }
                     u32 imm11 = address & 0x7FF;
                     u32 imm10 = (address >> 10) & 0x3FF;
                     u32 I2 = (address >> 22) & 1;
@@ -433,6 +448,10 @@ namespace cg {
                     writer << (0xD000 | (J1 << 13) | (J2 << 11) | imm11);
                     ++i;
                 }else{
+                    if((paddress & addrMask) != paddress){
+                        error = "Out of range";
+                        LOGD((void*)address, " # ", (void*)addrMask, "\n");
+                    }
                     address = address & addrMask;
                     writer << u16(op | address);
                 }
@@ -452,12 +471,12 @@ namespace cg {
             else writer << u16(OP);                             \
         }
 
-#define OP16L(NAME, ARGS, SYMBOL, OP)                           \
+#define OP16L(NAME, ARGS, SYMBOL, OPMAX, OP)                    \
         void NAME ARGS {                                        \
             if(error) return;                                   \
             if(verbose) LOGD( reinterpret_cast<void*>(uintptr_t(writer.tell(true) << 1)), ": ", #NAME, " (L", __LINE__, ")\n" ); \
             auto op = u16(OP);                                  \
-            symRef(SYMBOL, op);                                 \
+            symRef(SYMBOL, op, OPMAX);                          \
             if(writer.full()) error = "Writer Full";            \
             else writer << op;                                  \
         }
@@ -580,9 +599,9 @@ namespace cg {
 
         OP16(ASRS, (RL rdn, RL rm), (0b0100'0001'0000'0000 | s(rm, 3) | sw(rdn, 0)))
 
-        OP16L(B, (ConditionCode cc, Label label), label, (0b1101'0000'0000'0000 | s(cc, 8)))
+        OP16L(B, (ConditionCode cc, Label label), label, 8, (0b1101'0000'0000'0000 | s(cc, 8)))
 
-        OP16L(B, (Label label), label, (0b1110'0000'0000'0000))
+        OP16L(B, (Label label), label, 11, (0b1110'0000'0000'0000))
 
         OP16(BIC, (RL rdn, RL rm), (0b0100'0011'1000'0000 | s(rm, 3) | sw(rdn, 0)))
 

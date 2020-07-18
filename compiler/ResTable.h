@@ -1,8 +1,8 @@
 #pragma once
 
-#include "pinesUtils.h"
+#include "pineUtils.h"
 
-namespace pines {
+namespace pine {
 
     class ResTable {
         File file;
@@ -12,7 +12,7 @@ namespace pines {
 
     public:
         ResTable(u32 maxResCount) : capacity(maxResCount) {
-            file.openRW("pines/resources.tmp", true, false);
+            file.openRW("pine-2k/resources.tmp", true, false);
         }
 
         void reset(){

@@ -5,21 +5,67 @@
 #include "compiler/SimplePine.h"
 #include "assets.h"
 #include "miloslav.h"
+#include "TextMode.h"
 
 using PD = Pokitto::Display;
 using PC = Pokitto::Core;
 using PB = Pokitto::Buttons;
+using u32 = pine::u32;
+
+bool mirror;
+bool flip;
 
 Audio::Sink<2, PROJ_AUD_FREQ> audio;
+Audio::Note note;
 constexpr auto version = 1;
+
+uint32_t indexSize;
+File *musicFile = nullptr;
+File *resourceFile = nullptr;
+struct {
+    u32 hash;
+    u32 offset;
+} hashCache[16];
 
 void nopUpdate(){}
 void (*onUpdate)() = nopUpdate;
 
-pines::ResTable resTable(1024);
+pine::ResTable resTable(1024);
 char projectName[16];
 
-void stringFromHash(pines::u32 hash, char *str, pines::u32 max){
+using TextFiller = TextMode<8, 8, false>;
+TextFiller *textFiller = nullptr;
+u32 cmask = 0;
+u32 cclass = 0;
+
+void cleanup(){
+    mirror = false;
+    flip = false;
+    pine::deleteArrays();
+    resTable.reset();
+    if(textFiller){
+        delete textFiller;
+        textFiller = nullptr;
+    }
+    if(resourceFile){
+        delete resourceFile;
+        resourceFile = nullptr;
+    }
+    if(musicFile){
+        delete musicFile;
+        musicFile = nullptr;
+    }
+    Audio::stop<0>();
+    Audio::stop<1>();
+    note = Audio::Note().duration(500).wave(1).loop(false);
+    PD::lineFillers[0] = TAS::BGTileFiller;
+    PD::lineFillers[1] = TAS::SpriteFiller;
+    PD::lineFillers[2] = TAS::NOPFiller;
+    PD::lineFillers[3] = TAS::NOPFiller;
+    PD::loadRGBPalette(miloslav);
+}
+
+void stringFromHash(u32 hash, char *str, u32 max){
     auto pos = resTable.find(hash);
     if(!pos){
         str[0] = 0;
@@ -34,8 +80,8 @@ void stringFromHash(pines::u32 hash, char *str, pines::u32 max){
     str[i] = 0;
 }
 
-void pathFromHash(pines::u32 hash, char *str, pines::u32 max){
-    const char *src = "pines/";
+void pathFromHash(u32 hash, char *str, u32 max){
+    const char *src = "pine-2k/";
     while(*src){ *str++ = *src++; max--; }
     src = projectName;
     while(*src){ *str++ = *src++; max--; }
@@ -45,7 +91,7 @@ void pathFromHash(pines::u32 hash, char *str, pines::u32 max){
 
 void projectFilePath(const char *file, char *path){
     char *out = path;
-    const char *str = "pines/";
+    const char *str = "pine-2k/";
     while(*str) *out++ = *str++;
     str = projectName;
     while(*str) *out++ = *str++;
@@ -55,12 +101,17 @@ void projectFilePath(const char *file, char *path){
     *out++ = 0;
 }
 
-void printNumber(pines::s32 value){
-    PD::print(value);
-    PD::print(" ");
+void printNumber(pine::s32 value){
+    if(textFiller){
+        textFiller->printNumber(value);
+        textFiller->print(' ');
+    } else {
+        PD::print(value);
+        PD::print(" ");
+    }
 }
 
-void console(pines::u32 value){
+void console(u32 value){
     auto pos = resTable.find(value);
     if(pos){
         auto& file = resTable.at(pos);
@@ -75,42 +126,43 @@ void console(pines::u32 value){
     LOG("\n");
 }
 
-void print(pines::u32 value){
+void print(u32 value){
     auto pos = resTable.find(value);
     if(pos){
         auto& file = resTable.at(pos);
         while(true){
             auto ch = file.read<char>();
             if(!ch) break;
-            PD::print(ch);
+            if(textFiller) textFiller->print(ch);
+            else PD::print(ch);
         }
     }else{
         printNumber(value);
     }
 }
 
-bool pressed(pines::u32 id){
+bool pressed(u32 id){
     switch(id){
-    case pines::hash("\"A"):     return PC::aBtn();
-    case pines::hash("\"B"):     return PC::bBtn();
-    case pines::hash("\"C"):     return PC::cBtn();
-    case pines::hash("\"UP"):    return PC::upBtn();
-    case pines::hash("\"DOWN"):  return PC::downBtn();
-    case pines::hash("\"LEFT"):  return PC::leftBtn();
-    case pines::hash("\"RIGHT"): return PC::rightBtn();
+    case pine::hash("\"A"):     return PC::aBtn();
+    case pine::hash("\"B"):     return PC::bBtn();
+    case pine::hash("\"C"):     return PC::cBtn();
+    case pine::hash("\"UP"):    return PC::upBtn();
+    case pine::hash("\"DOWN"):  return PC::downBtn();
+    case pine::hash("\"LEFT"):  return PC::leftBtn();
+    case pine::hash("\"RIGHT"): return PC::rightBtn();
     }
     return false;
 }
 
-bool justPressed(pines::u32 id){
+bool justPressed(u32 id){
     switch(id){
-    case pines::hash("\"A"): return PB::pressed(BTN_A);
-    case pines::hash("\"B"): return PB::pressed(BTN_B);
-    case pines::hash("\"C"): return PB::pressed(BTN_C);
-    case pines::hash("\"UP"): return PB::pressed(BTN_UP);
-    case pines::hash("\"DOWN"): return PB::pressed(BTN_DOWN);
-    case pines::hash("\"LEFT"): return PB::pressed(BTN_LEFT);
-    case pines::hash("\"RIGHT"): return PB::pressed(BTN_RIGHT);
+    case pine::hash("\"A"): return PB::pressed(BTN_A);
+    case pine::hash("\"B"): return PB::pressed(BTN_B);
+    case pine::hash("\"C"): return PB::pressed(BTN_C);
+    case pine::hash("\"UP"): return PB::pressed(BTN_UP);
+    case pine::hash("\"DOWN"): return PB::pressed(BTN_DOWN);
+    case pine::hash("\"LEFT"): return PB::pressed(BTN_LEFT);
+    case pine::hash("\"RIGHT"): return PB::pressed(BTN_RIGHT);
     }
     return false;
 }
@@ -118,37 +170,44 @@ bool justPressed(pines::u32 id){
 void setColor(int c){ PD::color = c; }
 void setBackground(int c){ PD::bgcolor = c; }
 
-bool mirror;
-bool flip;
+void setCursor(int x, int y){
+    if(textFiller){
+        textFiller->x = x;
+        textFiller->y = y;
+    }
+    PD::setCursor(x, y);
+}
 
 void setMirror(int m){ mirror = m; }
 void setFlip(int f){ flip = f; }
 
 void sprite(int x, int y, const uint8_t *ptr){
-    if(!ptr)
-        return;
-    auto iptr = reinterpret_cast<uintptr_t>(ptr);
-    if( iptr > 0x10000000 && iptr < 0x10008000 && (iptr & 0x3) == 0){
-        auto len = (reinterpret_cast<uint32_t*>(iptr)[-1]&0xFFFF) * 4;
-        auto recolor = ptr[0];
-        auto bpp = ptr[1];
-        auto s = ptr[2] * ptr[3];
-        if(bpp == 8);
-        else if(bpp == 4) s >>= 1;
-        else if(bpp == 1) s >>= 3;
-        else goto defaultDraw;
-        if( (s + 4) != len) goto defaultDraw;
-        PD::setColorDepth(bpp);
-        PD::drawSprite(x, y, ptr + 2, flip, mirror, PD::color + recolor);
-        PD::setColorDepth(8);
-        return;
+    if(ptr){
+        auto iptr = reinterpret_cast<uintptr_t>(ptr);
+        if( iptr > 0x10000000 && iptr < 0x10008000 && (iptr & 0x3) == 0){
+            PD::m_colordepth = ptr[1]; // PD::setColorDepth(ptr[1]);
+            PD::drawSprite(
+                x, y,
+                ptr + 2,
+                flip, mirror,
+                PD::color + ptr[0],
+                cmask, cclass);
+            PD::setColorDepth(8);
+        } else {
+            PD::drawSprite(
+                x, y,
+                ptr,
+                flip, mirror,
+                PD::color,
+                cmask, cclass);
+        }
     }
-defaultDraw:
-    PD::drawSprite(x, y, ptr, flip, mirror, PD::color);
+    cmask = 0;
+    cclass = 0;
 }
 
-pines::u32 projectScore;
-void highscore(pines::u32 score){
+u32 projectScore;
+void highscore(u32 score){
     if(score <= projectScore)
         return;
     projectScore = score;
@@ -164,7 +223,7 @@ void highscore(pines::u32 score){
 void write_command_16(uint16_t data);
 void write_data_16(uint16_t data);
 
-void __attribute__((naked)) flush(pines::u16 *data, pines::u32 len){
+void __attribute__((naked)) flush(pine::u16 *data, u32 len){
     ASM(
         push {r4, r5, lr}       \n
         ldr r2, =0xA0002188     \n
@@ -193,7 +252,7 @@ void setWindow(int x, int w, int y, int h){
 }
 
 void fillRect(int x, int w, int y, int h, int color){
-    pines::u16 out[220];
+    pine::u16 out[220];
     setWindow(x, w, y, h);
     write_command(0x22);
     CLR_CS_SET_CD_RD_WR;
@@ -204,14 +263,14 @@ void fillRect(int x, int w, int y, int h, int color){
 }
 
 bool drawFile(int cx, int cy, const char *file){
-    pines::u16 out[220];
+    pine::u16 out[220];
     File f;
     if(!f.openRO(file)){
         return false;
     }
 
-    pines::s32 w = f.read<pines::u16>();
-    pines::s32 h = f.read<pines::u16>();
+    pine::s32 w = f.read<pine::u16>();
+    pine::s32 h = f.read<pine::u16>();
     auto stride = w * 2;
 
     if(h + cy >= 176)
@@ -230,45 +289,50 @@ bool drawFile(int cx, int cy, const char *file){
 
     for(int y = 0; y < h; y++){
         f.read((void*) out, stride);
+        for(int x = 0; x < w; ++x){
+            if(out[x] == 0xf81f) out[x] = PD::palette[PD::bgcolor];
+        }
         flush(out, w);
     }
 
     return true;
 }
 
-void splash(int cx, int cy, pines::u32 hash){
+void splash(int cx, int cy, u32 hash){
     char path[64];
     pathFromHash(hash, path, sizeof(path));
     if(!drawFile(cx, cy, path))
         LOG("Could not open:\n[", (const char*) path, "]\n");
 }
 
-uint32_t indexSize;
-File *resourceFile = nullptr;
-struct {
-    pines::u32 hash;
-    pines::u32 offset;
-} hashCache[16];
+void clearHashCache(){
+    for(auto i=0; i<16; ++i){
+        hashCache[i].hash = 0;
+        hashCache[i].offset = 0;
+    }
+}
 
-pines::u32 loadRes(pines::u32 nameHash){
+u32 loadRes(u32 nameHash){
     char path[128];
     pathFromHash(nameHash, path, 128);
     if(!resourceFile)
         resourceFile = new File();
-    if(!resourceFile->openRO(path)){
+    if(!resourceFile->openRO(path))
         return 0;
-    }
     indexSize = resourceFile->read<uint32_t>();
+    clearHashCache();
     return 1;
 }
 
-pines::u32 readResource(pines::u32 hash, char *ptr){
-    using namespace pines;
+u32 readResource(u32 hash, char *ptr){
+    using namespace pine;
 
     if(!resourceFile || !hash)
         return 0;
 
     auto& file = *resourceFile;
+    if(!file) return 0;
+    
     auto& cache = hashCache[hash & 0xF];
     if(cache.hash == hash){
         file.seek(cache.offset);
@@ -301,13 +365,13 @@ pines::u32 readResource(pines::u32 hash, char *ptr){
         }
     }
 
-    auto len = file.read<pines::u32>();
+    auto len = file.read<u32>();
     bool created = false;
     if(!ptr){
         created = true;
         u32 size = len;
         if(size & 3) size += 4;
-        ptr = reinterpret_cast<char*>(pines::arrayCtr(size >> 2));
+        ptr = reinterpret_cast<char*>(pine::arrayCtr(size >> 2));
     }
 
     // u32 read =
@@ -316,7 +380,19 @@ pines::u32 readResource(pines::u32 hash, char *ptr){
     return reinterpret_cast<u32>(ptr);
 }
 
-pines::u32 readFile(pines::u32 nameHash, char *ptr){
+bool writeFile(u32 nameHash, u32 *ptr){
+    if(!ptr) return false;
+    char path[128];
+    pathFromHash(nameHash, path, 128);
+    File file;
+    if(!file.openRW(path, true, false))
+        return false;
+    auto len = ptr[-1] & 0xFFFF;
+    file.write(reinterpret_cast<void*>(ptr), len * 4);
+    return true;
+}
+
+u32 readFile(u32 nameHash, char *ptr){
     if(resourceFile){
         auto ret = readResource(nameHash, ptr);
         if(ret)
@@ -335,67 +411,89 @@ pines::u32 readFile(pines::u32 nameHash, char *ptr){
         return 0;
     }
     if(!ptr){
-        pines::u32 size = file.size();
+        u32 size = file.size();
         if(size & 3) size += 4;
-        ptr = reinterpret_cast<char*>(pines::arrayCtr(size >> 2));
+        ptr = reinterpret_cast<char*>(pine::arrayCtr(size >> 2));
     }
     file.read(ptr, file.size());
-    return reinterpret_cast<pines::u32>(ptr);
+    return reinterpret_cast<u32>(ptr);
 }
 
-Audio::Note note;
-
-void music(pines::u32 hash){
+void music(u32 hash){
     char path[64];
     pathFromHash(hash, path, sizeof(path));
-    auto m = Audio::play<0>((const char*)path);
-    if(m){
-        m->setLoop(note._loop);
-    }
+    if(!musicFile) musicFile = new File();
+    if(!musicFile->openRO(path)) return;
+    Audio::play<0>(*musicFile).setLoop(note._loop);
 }
 
-void sound(pines::u32 num, pines::u32 osc){
+void sound(u32 num, u32 osc){
     note.noteNumber(num);
     note.play<1>(osc & 3);
 }
 
-pines::u32 read(pines::u32 key, pines::u32 a, pines::u32 b, pines::u32 c){
+u32 read(u32 key, u32 a, u32 b, u32 c){
     switch(key){
-    case pines::hash("\"VERSION"): return version;
-    case pines::hash("\"TILE"): return reinterpret_cast<pines::u32>(PD::getTile(a, b));
-    case pines::hash("\"COLOR"): return PD::getTileColor(a, b);
-    case pines::hash("\"VOLUME"): if(a < 255) note.volume(a); return note._volume;
-    case pines::hash("\"OVERDRIVE"): if(a < 2) note.overdrive(a); return note._overdrive;
-    case pines::hash("\"LOOP"): if(a < 2) note.loop(a); return note._loop;
-    case pines::hash("\"ECHO"): if(a < 2) note.echo(a); return note._echo;
-    case pines::hash("\"ATTACK"): if(a <= 0xFFFF) note.attack(a); return note._attack;
-    case pines::hash("\"DECAY"): if(a <= 0xFFFF) note.decay(a); return note._decay;
-    case pines::hash("\"SUSTAIN"): if(a <= 0xFFFF) note.sustain(a); return note._sustain;
-    case pines::hash("\"RELEASE"): if(a <= 0xFFFF) note.release(a); return note._release;
-    case pines::hash("\"MAXBEND"): if(int(a) <= 0xFFFF) note.maxbend(a); return note._maxbend;
-    case pines::hash("\"BENDRATE"): if(int(a) <= 0xFFFF) note.release(a); return note._release;
-    case pines::hash("\"DURATION"): if(a) note.duration(a << 3); return note._duration >> 3;
-    case pines::hash("\"WAVE"):
+    case pine::hash("\"COLLISION"): {
+        cclass = a;
+        if(!c) b = 0;
+        if(!b) c = 0;
+        cmask = b;
+        PD::collisionCallback = reinterpret_cast<void(*)(u32, u32)>(c);
+        return 0;
+    }
+    case pine::hash("\"FILLER"): {
+        if(a >= 4) return 0;
+        if(b == pine::hash("\"TILES")){
+            PD::lineFillers[a] = TAS::BGTileFiller;
+        } else if(b == pine::hash("\"SPRITES")) {
+            PD::lineFillers[a] = TAS::SpriteFiller;
+        } else if(b == pine::hash("\"TEXT")) {
+            if(!textFiller) textFiller = new TextFiller();
+            textFiller->activate(a);
+        } else {
+            PD::lineFillers[a] = reinterpret_cast<TAS::LineFiller>(b);
+        }
+        return 0;
+    }
+    case pine::hash("\"CLEARTEXT"): if(textFiller) textFiller->clear(); return 0;
+    case pine::hash("\"SCALE"): PD::fontSize = a; return a;
+    case pine::hash("\"VERSION"): return version;
+    case pine::hash("\"TILE"): return reinterpret_cast<u32>(PD::getTile(a, b));
+    case pine::hash("\"COLOR"): return PD::getTileColor(a, b);
+    case pine::hash("\"VOLUME"): if(a < 255) note.volume(a); return note._volume;
+    case pine::hash("\"OVERDRIVE"): if(a < 2) note.overdrive(a); return note._overdrive;
+    case pine::hash("\"LOOP"): if(a < 2) note.loop(a); return note._loop;
+    case pine::hash("\"ECHO"): if(a < 2) note.echo(a); return note._echo;
+    case pine::hash("\"ATTACK"): if(a <= 0xFFFF) note.attack(a); return note._attack;
+    case pine::hash("\"DECAY"): if(a <= 0xFFFF) note.decay(a); return note._decay;
+    case pine::hash("\"SUSTAIN"): if(a <= 0xFFFF) note.sustain(a); return note._sustain;
+    case pine::hash("\"RELEASE"): if(a <= 0xFFFF) note.release(a); return note._release;
+    case pine::hash("\"MAXBEND"): if(int(a) <= 0xFFFF) note.maxbend(a); return note._maxbend;
+    case pine::hash("\"BENDRATE"): if(int(a) <= 0xFFFF) note.release(a); return note._release;
+    case pine::hash("\"DURATION"): if(a) note.duration(a << 3); return note._duration >> 3;
+    case pine::hash("\"WAVE"):
         switch(a){
-        case pines::hash("\"SQUARE"): note.wave(1); break;
-        case pines::hash("\"SAW"): note.wave(2); break;
-        case pines::hash("\"TRIANGLE"): note.wave(3); break;
-        case pines::hash("\"NOISE"): note.wave(4); break;
+        case pine::hash("\"SQUARE"): note.wave(1); break;
+        case pine::hash("\"SAW"): note.wave(2); break;
+        case pine::hash("\"TRIANGLE"): note.wave(3); break;
+        case pine::hash("\"NOISE"): note.wave(4); break;
         }
         return note._wave;
-    default: break;
+    default: 
+        LOG("Invalid io\n");
+        break;
     }
-    LOG("Invalid read\n");
     return 0;
 }
 
-void tileshift(pines::u32 x, pines::u32 y){
+void tileshift(u32 x, u32 y){
     PD::shiftTilemap(x, y);
 }
 
-void tile(pines::u32 x, pines::u32 y, pines::u32 t){
+void tile(u32 x, u32 y, u32 t){
     if(t > 256){
-        auto ptr = reinterpret_cast<const pines::u8 *>(t);
+        auto ptr = reinterpret_cast<const pine::u8 *>(t);
         auto w = *ptr++;
         auto h = *ptr++;
         PD::drawTile(x, y, ptr, PD::color, w == PROJ_TILE_W * 2);
@@ -404,7 +502,7 @@ void tile(pines::u32 x, pines::u32 y, pines::u32 t){
     }
 }
 
-void fillTiles(pines::u32 color){
+void fillTiles(u32 color){
     static constexpr int screenWidth = PROJ_LCDWIDTH;
     static constexpr int screenHeight = PROJ_LCDHEIGHT;
     constexpr uint32_t tileW = POK_TILE_W;
@@ -418,14 +516,14 @@ void fillTiles(pines::u32 color){
     }
 }
 
-const char *builtin(pines::u32 hash, pines::u32 index){
-    auto pos = reinterpret_cast<const pines::u32*>(&assets);
+const char *builtin(u32 hash, u32 index){
+    auto pos = reinterpret_cast<const u32*>(&assets);
     if(uintptr_t(pos) & 0x3){
         LOG("Unaligned data\n");
         while(true);
     }
     auto count = *pos++;
-    if( hash == pines::hash("\"INDEX") ){
+    if( hash == pine::hash("\"INDEX") ){
         LOG("Hash lookup ", index, "\n");
         while(count--){
             auto candidate = *pos++;
@@ -447,8 +545,8 @@ const char *builtin(pines::u32 hash, pines::u32 index){
     return 0;
 }
 
-pines::u32 state = 0xDEADBEEF;
-pines::s32 xorshift32(pines::s32 min, pines::s32 max){
+u32 state = 0xDEADBEEF;
+pine::s32 xorshift32(pine::s32 min, pine::s32 max){
     state ^= state << 13;
     state ^= state >> 17;
     state ^= state << 5;
@@ -481,25 +579,20 @@ void exitPine(){
 }
 
 void run(const char *);
-pines::u32 execHash;
+u32 execHash;
 void exec(){
     char path[64];
     pathFromHash(execHash, path, sizeof(path));
     onUpdate = updateMenu;
-    pines::deleteArrays();
+    pine::deleteArrays();
     resTable.reset();
     run(path);
 }
 
-
 void run(const char *path){
-    note = Audio::Note().duration(500).wave(1).loop(false);
-    if(resourceFile){
-        delete resourceFile;
-        resourceFile = nullptr;
-    }
+    cleanup();
 
-    pines::SimplePine pine(path, resTable);
+    pine::SimplePine pine(path, resTable);
     pine.setConstant("print", print);
     pine.setConstant("console", console);
     pine.setConstant("printNumber", printNumber);
@@ -513,7 +606,7 @@ void run(const char *path){
     pine.setConstant("window", PD::setTASWindow);
     pine.setConstant("random", xorshift32);
     pine.setConstant("builtin", builtin, true);
-    pine.setConstant("cursor", PD::setCursor);
+    pine.setConstant("cursor", setCursor);
     pine.setConstant("color", setColor);
     pine.setConstant("background", setBackground);
     pine.setConstant("pressed", pressed);
@@ -521,17 +614,25 @@ void run(const char *path){
     pine.setConstant("time", PC::getTime);
     pine.setConstant("io", read);
     pine.setConstant("file", readFile, true);
+    pine.setConstant("save", writeFile);
     pine.setConstant("music", music);
     pine.setConstant("sound", sound);
     pine.setConstant("highscore", highscore);
     pine.setConstant("exit", exitPine);
-    pine.setConstant("exec", +[](pines::u32 hash){
+    pine.setConstant("sin", trig::sin, true);
+    pine.setConstant("cos", trig::cos, true);
+    pine.setConstant("min", +[](int a, int b){ return a < b ? a : b; }, true);
+    pine.setConstant("max", +[](int a, int b){ return a > b ? a : b; }, true);
+    pine.setConstant("exec", +[](u32 hash){
                                   execHash = hash;
                                   onUpdate = exec;
                               });
     if(pine.compile()){
+        onUpdate = nullptr;
+        PD::collisionCallback = +[](uint32_t, uint32_t){};
         pine.run();
-        onUpdate = pine.getCall<void()>("update");
+        if(!onUpdate)
+            onUpdate = pine.getCall<void()>("update");
     }
     if(!onUpdate)
         onUpdate = nopUpdate;
@@ -556,14 +657,13 @@ void updateMenu(){
     auto projectNames = reinterpret_cast<char*>(0x20000000);
     bool draw = false;
     if(!projectCount){
-        pines::deleteArrays();
-        resTable.reset();
+        cleanup();
         prevselection = -1;
         draw = true;
 
         {
             File theme;
-            if(theme.openRO("pines/theme")){
+            if(theme.openRO("pine-2k/theme")){
                 theme >> PD::bgcolor >> PD::color;
             }else{
                 PD::bgcolor = 209;
@@ -575,19 +675,30 @@ void updateMenu(){
 
         {
             Directory directory;
-            directory.open("pines");
+            directory.open("pine-2k");
             while(
                 auto info = directory.read(
                     [](FileInfo &info){
                         if(!(info.fattrib & AM_DIR))
                             return false;
+                        if(strlen(info.name()) > 15)
+                            return false;
                         setProjectName(info.name());
                         char srcpath[64];
-                        projectFilePath("src.pines", srcpath);
+                        projectFilePath("src.js", srcpath);
                         return !!File{}.openRO(srcpath);
                     })
                 ){
-                strcpy(projectNames + projectCount * 16, info->name());
+                setProjectName(info->name());
+                for(u32 i=0; i<projectCount; ++i){
+                    if(strcmp(projectNames + i * 16, projectName) > 0){
+                        char tmp[16];
+                        strcpy(tmp, projectNames + i * 16);
+                        strcpy(projectNames + i * 16, projectName);
+                        strcpy(projectName, tmp);
+                    }
+                }
+                strcpy(projectNames + projectCount * 16, projectName);
                 projectCount++;
             }
         }
@@ -612,8 +723,9 @@ void updateMenu(){
         PD::bgcolor = xorshift32(0, 255);
         PD::color = xorshift32(0, 255);
         File theme;
-        theme.openRW("pines/theme", true, false);
+        theme.openRW("pine-2k/theme", true, false);
         theme << PD::bgcolor << PD::color;
+        prevselection = -1;
     }
 
     if(PB::aBtn()){
@@ -632,7 +744,7 @@ void updateMenu(){
         return;
 
     if((prevselection >> 2) != (selection >> 2)){
-        fillRect(40, 220 - 80, 0, 176, 0);
+        fillRect(40, 220 - 80, 0, 176, PD::palette[PD::bgcolor]);
         for(int i = 0; i < 4; ++i){
             auto dirOffset = selection >> 2 << 2;
             auto projectNumber = dirOffset + i;
@@ -652,12 +764,12 @@ void updateMenu(){
                 }
                 PD::print(projectScore);
             }else{
-                drawFile(42, 8 + i * 41, "pines/empty.565");
+                drawFile(42, 8 + i * 41, "pine-2k/empty.565");
             }
         }
     }
 
-    auto tile = reinterpret_cast<const uint8_t*>(builtin(pines::hash("\"sBtn"), 0)) + 2;
+    auto tile = reinterpret_cast<const uint8_t*>(builtin(pine::hash("\"sBtn"), 0)) + 2;
     for(int y = 0; y < 23; ++y){
         for(int x = 0; x < 28; ++x){
             PD::drawTile(x, y, tile, PD::bgcolor, false);
@@ -709,7 +821,7 @@ void updateMenu(){
 }
 
 void pickProject(){
-    pines::deleteArrays();
+    pine::deleteArrays();
     resTable.reset();
     loadProjectHighscore();
     PD::color = 0;
@@ -721,19 +833,57 @@ void pickProject(){
     projectFilePath("splash.565", path);
     drawFile(0, 0, path);
 
-    projectFilePath("src.pines", path);
+    projectFilePath("src.js", path);
     run(path);
 }
 
+extern const unsigned char font5x7[];
+
 void init(){
+    // PD::setFont(font5x7);
     PD::adjustCharStep = 0;
     PD::bgcolor = 0;
     PD::invisiblecolor = 0;
     state += PC::getTime();
-    PD::loadRGBPalette(miloslav);
+    #ifdef PROJ_DEVELOPER_MODE
+    PD::update();
+    #endif
     exitPine();
 }
 
 void update(){
+    cclass = 0;
+    cmask = 0;
     onUpdate();
 }
+
+#ifndef PROJ_DEVELOPER_MODE
+
+const auto magic = 0xFEEDBEEF;
+const auto magicPtr = reinterpret_cast<volatile u32*>(0x20004000);
+const auto reset = 0x05FA0004;
+const auto resetPtr = reinterpret_cast<volatile u32*>(0xE000ED0C);
+
+int main(){
+    if( *magicPtr != magic ){
+        PC::begin();
+    } else {
+        PC::init();
+        PD::begin();
+    }
+    init();
+    while(true){
+        if(PC::update())
+            update();
+    }
+}
+
+/* * /
+extern "C" {
+    void HardFault_Handler(void) {
+        *magicPtr = magic;
+        *resetPtr = reset;
+    }
+}
+/* */
+#endif
