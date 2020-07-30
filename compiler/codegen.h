@@ -19,6 +19,7 @@ namespace cg {
     using u32 = uint32_t;
     using s32 = int32_t;
     using u16 = uint16_t;
+    using u8 = uint8_t;
 
     enum ConditionCode : u32 {
         EQ = 0,
@@ -345,11 +346,61 @@ namespace cg {
             symTable[symCount++] = { lbl.value, ~u32{} };
         }
 
+        void addrRef(u32 address, u32 &op, u32 opMax){
+            u32 i = writer.tell();
+            address = ((s32(address) >> 1) - (i + 2));
+            u32 paddress = s32(address) < 0 ? -address : address;
+            paddress <<= 1;
+            if(paddress > 0x7fffff){
+                error = "Out of range";
+                LOGD("ADDR: ", (void*)address, "\n");
+            }
+            u32 imm11 = address & 0x7FF;
+            u32 imm10 = (address >> 11) & 0x3FF;
+            u32 I2 = (address >> 21) & 1;
+            u32 I1 = (address >> 22) & 1;
+            u32 S = s32(address) < 0;
+            u32 J2 = !(I2 ^ S);
+            u32 J1 = !(I1 ^ S);
+            u16 H = 0xF000 | (S << 10) | imm10;
+            u16 L = 0xD000 | (J1 << 13) | (J2 << 11) | imm11;
+            op |= u32(H) << 16 | L;
+
+                // LOG("J ",
+                //     (void*) ((u32(H)<<16) | L),
+                //     " a:", (void*) symTable[symId].address,
+                //     " i:", i,
+                //     " s:", S,
+                //     "\n");
+
+
+            // for(u32 i=0; i<symCount; ++i){
+            //     if( symTable[i].address == lbl ){
+            //         op |= i;
+            //         if(i > (~u32{} >> (32 - opMax))){
+            //             error = "opmax";
+            //         }
+            //         // LOG("O32 ", (void*) op, "\n");
+            //         return;
+            //     }
+            // }
+            // if(symCount > (~u32{} >> (32 - opMax))){
+            //     error = "opmax";
+            // }
+            // op |= symCount;
+            // // LOG("O32 ", (void*) op, "\n");
+            // symTable[symCount++] = { 0, lbl };
+        }
+
         u32 regHasConst = 0;
         u32 regConst[15];
+        // u8 spReg[256];
 
         u32 clearRegs(){
             regHasConst = 0;
+            // for(u32 i=0; i<256; ++i){
+            //     spReg[i] = 0xFF;
+            // }
             return 0;
         }
 
@@ -411,10 +462,13 @@ namespace cg {
                 } else if( (op & 0xF000) == 0b1101'0000'0000'0000 ){ bits = 8; signedAddress = true; }
                 else if( (op & 0xF800) == 0b1110'0000'0000'0000 ) bits = 11;
                 else if( (op & 0xF800) == 0b1111'0000'0000'0000 ){
-                    low = writer.read();
-                    if( (low & 0xD000) == 0b1101'0000'0000'0000 ){
-                        bits = 10;
-                    }else continue;
+                    continue;
+                    // low = writer.read();
+                    // if( (low & 0xD000) == 0b1101'0000'0000'0000 ){
+                    //     // LOG("low=", low, "\n");
+                    //     bits = 10;
+                    //     signedAddress = true;
+                    // }else continue;
                 }
                 else continue;
 
@@ -427,26 +481,35 @@ namespace cg {
                     return;
                 }
 
-                address = ((address >> 1) - (i + 2));
+                address = ((s32(address) >> 1) - (i + 2));
                 writer.seek(i);
                 u32 paddress = s32(address) < 0 ? -address : address;
                 if(signedAddress) paddress <<= 1;
 
                 if(low){
-                    if(paddress > 0x7fffff){
-                        error = "Out of range";
-                        LOGD("ADDR: ", (void*)address, "\n");
-                    }
-                    u32 imm11 = address & 0x7FF;
-                    u32 imm10 = (address >> 10) & 0x3FF;
-                    u32 I2 = (address >> 22) & 1;
-                    u32 I1 = (address >> 23) & 1;
-                    u32 S = address < 0;
-                    u32 J2 = 1 ^ I2 ^ S;
-                    u32 J1 = 1 ^ I1 ^ S;
-                    writer << (0xF000 | (S << 10) | imm10);
-                    writer << (0xD000 | (J1 << 13) | (J2 << 11) | imm11);
-                    ++i;
+                    // if(paddress > 0x7fffff){
+                    //     error = "Out of range";
+                    //     LOGD("ADDR: ", (void*)address, "\n");
+                    // }
+                    // u32 imm11 = address & 0x7FF;
+                    // u32 imm10 = (address >> 11) & 0x3FF;
+                    // u32 I2 = (address >> 21) & 1;
+                    // u32 I1 = (address >> 22) & 1;
+                    // u32 S = s32(address) < 0;
+                    // u32 J2 = !(I2 ^ S);
+                    // u32 J1 = !(I1 ^ S);
+                    // u16 H = 0xF000 | (S << 10) | imm10;
+                    // u16 L = 0xD000 | (J1 << 13) | (J2 << 11) | imm11;
+
+                    // // LOG("J ",
+                    // //     (void*) ((u32(H)<<16) | L),
+                    // //     " a:", (void*) symTable[symId].address,
+                    // //     " i:", i,
+                    // //     " s:", S,
+                    // //     "\n");
+
+                    // writer << H << L;
+                    // ++i;
                 }else{
                     if((paddress & addrMask) != paddress){
                         error = "Out of range";
@@ -489,14 +552,14 @@ namespace cg {
             else writer << u32(OP);                             \
         }
 
-#define OP32L(NAME, ARGS, SYMBOL, OP)                           \
+#define OP32L(NAME, ARGS, ADDR, OP)                             \
         void NAME ARGS {                                        \
             if(error) return;                                   \
             if(verbose) LOGD( reinterpret_cast<void*>(uintptr_t(writer.tell(true) << 1)), ": ", #NAME, " (L", __LINE__, ")\n" ); \
             auto op = u32(OP);                                  \
-            symRef(SYMBOL, op);                                 \
+            addrRef(ADDR, op, 10);                              \
             if(writer.full()) error = "Writer Full";            \
-            else writer << op;                                  \
+            else writer << u16(op>>16) << u16(op);              \
             regHasConst = 0;                                    \
         }
 
@@ -505,7 +568,7 @@ namespace cg {
         using RH = RegHigh;
 
         void label(Label lbl) {
-            regHasConst = 0;
+            clearRegs();
             for(u32 i=0; i<symCount; ++i){
                 if(symTable[i].hash == lbl.value){
                     if(symTable[i].address != ~u32{}){
@@ -607,7 +670,7 @@ namespace cg {
 
         OP16(BKPT, (I8 i), (0b1011'1110'0000'0000 | s(i, 0)))
 
-        OP32L(BL, (Label label), label, (0b1111'0000'0000'0000'1101'0000'0000'0000))
+        OP32L(BL, (u32 address), address, (0b1111'0000'0000'0000'1101'0000'0000'0000 | clearRegs()))
 
         OP16(BLX, (RL rm), (0b0100'0111'1000'0000 | s(rm, 3) | clearRegs()))
 
@@ -637,11 +700,27 @@ namespace cg {
 
         void clearConst(RL rl){
             regHasConst &= ~(1 << rl.value);
+            // for(u32 i=0; i<256; ++i){
+            //     if(spReg[i] == rl.value){
+            //         spReg[i] = 0xFF;
+            //     }
+            // }
         }
+
+        /*
+        bool isInReg(Imm<8, 2> imm, RL r){
+            return spReg[imm.value] == r.value;
+        }
+
+        void setIsInReg(Imm<8, 2> imm, RL r){
+            spReg[imm.value] = r.value;
+        }
+        */
 
         bool tryLDRS(RL rt, u32 imm){
             if(hasConst(rt) && regConst[rt.value] == imm)
                 return true;
+
             if((imm & ~0xFF) == 0){
                 MOVS(rt, imm);
                 setConst(rt, imm);
@@ -659,6 +738,23 @@ namespace cg {
             //         return true;
             //     }
             }
+
+/*
+            for(int i=0; i<13; ++i){
+                if(!hasConst(RegLow(i))) continue;
+                int d = imm - regConst[i];
+                if(d > 0 && d <= 7){
+                    ADDS(rt, RegLow(i), d);
+                } else if(d < 0 && d >= -7){
+                    SUBS(rt, RegLow(i), -d);
+                } else if(d == 0){
+                    MOVS(rt, RegLow(i));
+                } else continue;
+                setConst(rt, imm);
+                return true;
+            }
+*/
+
             return false;
         }
 
@@ -676,6 +772,7 @@ namespace cg {
                 constPool[constCount++] = imm;
             }
             LDR(rt, PC, offset << 2);
+            // setConst(rt, imm);
         }
 
         void LDRS(RL rt, u32 imm){
@@ -695,7 +792,21 @@ namespace cg {
 
         OP16(LDR, (RL rt, RL rn, Imm<5, 2> imm = 0), (0b0110'1000'0000'0000 | s(imm, 6) | s(rn, 3) | sw(rt, 0)))
 
+        /* */
         OP16(LDR, (RL rt, SP_t, Imm<8, 2> imm), (0b1001'1000'0000'0000 | sw(rt, 8) | s(imm, 0)))
+        /*/
+        void LDR(RL rt, SP_t, Imm<8, 2> imm){
+            if(error) return;
+            if(verbose) LOGD( reinterpret_cast<void*>(uintptr_t(writer.tell(true) << 1)), ": LDR (L", __LINE__, ")\n" );
+            if(isInReg(imm, rt)){
+                LOG("Redundant load ignored\n");
+                // BKPT(0);
+                return;
+            }
+            if(writer.full()) error = "Writer Full";
+            else writer << u16(0b1001'1000'0000'0000 | sw(rt, 8) | s(imm, 0));
+        }
+        /* */
 
         OP16(LDR, (RL rt, PC_t, Imm<8, 2> imm), (0b0100'1000'0000'0000 | sw(rt, 8) | s(imm, 0)))
 
@@ -783,7 +894,17 @@ namespace cg {
 
         OP16(STR, (RL rt, RL rn, Imm<5, 2> imm = 0), (0b0110'0000'0000'0000 | s(imm, 6) | s(rn, 3) | s(rt, 0)))
 
+        /* */
         OP16(STR, (RL rt, SP_t sp, Imm<8, 2> imm), (0b1001'0000'0000'0000 | s(rt, 8) | s(imm, 0)))
+        /*/
+        void STR(RL rt, SP_t sp, Imm<8, 2> imm){
+            if(error) return;
+            if(verbose) LOGD( reinterpret_cast<void*>(uintptr_t(writer.tell(true) << 1)), ": STR (L", __LINE__, ")\n" );
+            if(writer.full()) error = "Writer Full";
+            else writer << u16(0b1001'0000'0000'0000 | s(rt, 8) | s(imm, 0));
+            setIsInReg(imm, rt);
+        }
+        /* */
 
         OP16(STR, (RL rt, RL rn, RL rm), (0b0101'0000'0000'0000 | s(rm, 6) | s(rn, 3) | s(rt, 0)))
 

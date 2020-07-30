@@ -5,6 +5,7 @@
 // Press Ctrl+Enter to run this script or use the menu.
 
 const transparentIndex = 0;
+const maxImages = 3000;
 
 let promises = [];
 let palette;
@@ -27,9 +28,11 @@ APP.getPalette(pal=>{
 });
 
 function start(){
-    Promise.all((dir("assets")||[])
-    .filter( file=>/\.png$/i.test(file) )
-    .map( (file) => {
+    let images = (dir("assets")||[])
+                 .filter( file=>/\.png$/i.test(file) );
+    if(images.length > maxImages) images.length = maxImages;
+
+    Promise.all(images.map( (file) => {
         return readImage(`assets/${file}`)
             .then( image => {
                 let img = convert(image, 0, 0, image.width, image.height);
@@ -37,9 +40,10 @@ function start(){
                 if(hashes[key]){
                     log("Collision: ", key, file, hashes[key]);
                 } else {
-                    log(file, "=>", key, "@", acc.length);
+                    // log(file, "=>", key, "@", acc.length);
                 }
                 hashes[key] = file;
+                while(acc.length&3)acc.push(0);
                 acc.push(key & 0xFF); key >>= 8;
                 acc.push(key & 0xFF); key >>= 8;
                 acc.push(key & 0xFF); key >>= 8;

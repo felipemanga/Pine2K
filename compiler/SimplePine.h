@@ -146,13 +146,15 @@ namespace pine {
         }
     }
 
+    inline u32 gcLockCount = 0;
     inline u32 globalCount = 0;
     inline u32* arrayCtr(u32 size){
         auto stackTop = reinterpret_cast<u32 **>(0x10008000);
         u32** stackBottom;
         __asm__ volatile("mov %[stackBottom], SP":[stackBottom] "+l" (stackBottom)::"r4", "r5", "r6", "r7");
         auto globals = reinterpret_cast<u32 **>(0x20004000);
-        gc(stackBottom, stackTop, globals, globalCount);
+        if(!gcLockCount)
+            gc(stackBottom, stackTop, globals, globalCount);
 
         auto array = new u32[size + 1];
         if(!array){
@@ -164,7 +166,7 @@ namespace pine {
 
         array[0] = size | (u32(arrays) << 16);
         arrays = reinterpret_cast<uintptr_t>(array + 1) - 0x10000000;
-        for(u32 i=1; i<size; ++i)
+        for(u32 i=1; i<=size; ++i)
             array[i] = 0;
         return array + 1;
     }
@@ -193,6 +195,11 @@ namespace pine {
             resTable(resTable),
             pine(tok, cg, symTable, resTable, dataSection)
             {
+                gcLockCount = 0;
+                pine.setGCLock([](bool locked){
+                                   if(locked) gcLockCount++;
+                                   else if(gcLockCount) gcLockCount--;
+                               });
                 pine.setAllocator([](u32 size) -> void * {
                                        u32 *array = arrayCtr(size >> 2);
                                        array[-1] |= 1 << 17;
@@ -225,7 +232,7 @@ namespace pine {
             // cg.NOP();
             // cg.link();
 
-            pine.parseGlobal();
+            pine.parseGlobal(codeSection);
             if(pine.getError())
                 return false;
 
@@ -251,26 +258,6 @@ namespace pine {
 
             MemOps::set(reinterpret_cast<void*>(dataSection), 0, 0x800);
 
-            // u32 init = cg.tell();
-            // if(init & 0x2){
-            //     cg.NOP();
-            //     init+=2;
-            // }
-
-            // init += codeSection;
-
-            // u32 id = 0, len = 0;
-            // for(auto &sym : pine.symbols()){
-            //     if(sym.memInit() && sym.init && sym.address != 0xFFFF){
-            //         u32 address = dataSection + (sym.address << 2);
-            //         LOG("MemInit ", id, " ", (void*) address, " ", (void *) sym.init, "\n");
-            //         cg.U32(address);
-            //         cg.U32(sym.init);
-            //         len++;
-            //     }
-            //     id++;
-            // }
-
             u32 size = cg.tell();
             if(size > 2048){
                 LOG("PROGMEM OVERFLOWED BY ", size - 2048, " BYTES\n");
@@ -284,6 +271,9 @@ namespace pine {
 
             u32 id = 0, len = 0;
             for(auto &sym : pine.symbols()){
+                // if(sym.type == Sym::Type::FUNCTION){
+                //     LOG("Func @ 0x", (void*) sym.kctv, "\n");
+                // }
                 if(sym.address != 0xFFFF){
                     auto address = reinterpret_cast<u32*>( dataSection + (sym.address << 2) );
                     // LOG("MemInit ", id, " ", (void*) address, " ", (void *) sym.init, "\n");

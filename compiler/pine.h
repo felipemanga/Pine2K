@@ -295,13 +295,15 @@ class Pine {
     u32 isConstexpr;
     u32 line = 0, column = 0;
     u32 scopeId = 0, globalScopeSize = 0, scopeSize = 0, maxScope = 0;
-    u32 token, symId = invalidSym;
+    u32 token, symId = invalidSym, functionAddress, baseAddress;
     RegAlloc regAlloc;
     CodeGen& codegen;
     u32 nextLabel = 1, returnLabel = 0;
     u32 preserveFlags = 0;
     SymTable& symTable;
     ResTable& resTable;
+    File a2l;
+    u32 a2lpos = ~u32{};
 
     u32 lblBreak = ~u32{}, lblContinue = ~u32{};
 
@@ -382,9 +384,107 @@ class Pine {
             (token == "["_token);
     }
 
+    bool isCompareOperator(){
+        switch(token){
+        case "==="_token:
+        case "=="_token:
+        case "!="_token:
+        case "!=="_token:
+        case "<"_token:
+        case "<="_token:
+        case ">"_token:
+        case ">="_token:
+            return true;
+        }
+        return false;
+    }
+
+    bool isSumOperator(u32 token){
+        switch(token){
+        case "+"_token:
+        case "-"_token:
+        case "^"_token:
+        case "|"_token:
+        case "&"_token:
+        case ">>"_token:
+        case ">>>"_token:
+        case "<<"_token:
+            return true;
+        }
+        return false;
+    }
+
+    bool isMulOperator(u32 token){
+        switch(token){
+        case "*"_token:
+        case "/"_token:
+        case "%"_token:
+            return true;
+        }
+        return false;
+    }
+
+    u32 isLogicOperator(u32 token){
+        return token == "&&"_token || token == "||"_token;
+    }
+
+    u32 getNonAssignOperator(){
+        auto op = token;
+        switch( op ){
+        case "==="_token:    op = "=="_token;   break;
+        case "!=="_token:    op = "!="_token;   break;
+        case "*="_token:     op = "*"_token;    break;
+        case "/="_token:     op = "/"_token;    break;
+        case "+="_token:     op = "+"_token;    break;
+        case "-="_token:     op = "-"_token;    break;
+        case "<<="_token:    op = "<<"_token;   break;
+        case ">>="_token:    op = ">>"_token;   break;
+        case ">>>="_token:   op = ">>>"_token;  break;
+        case "&="_token:     op = "&"_token;    break;
+        case "&&="_token:    op = "&&"_token;   break;
+        case "|="_token:     op = "|"_token;    break;
+        case "||="_token:    op = "||"_token;   break;
+        case "^="_token:     op = "^"_token;    break;
+        case "%="_token:     op = "%"_token;    break;
+        default: break;
+        }
+        return op;
+    }
+
+    bool isAssignOperator(){
+        switch( token ){
+        case "="_token:
+        case "*="_token:
+        case "/="_token:
+        case "+="_token:
+        case "-="_token:
+        case "<<="_token:
+        case ">>="_token:
+        case ">>>="_token:
+        case "&="_token:
+        case "&&="_token:
+        case "|="_token:
+        case "||="_token:
+        case "^="_token:
+        case "%="_token: return true;
+        default: return false;
+        }
+    }
+
+    bool isNonAssignOperator(){
+        return tok.isOperator() && !isAssignOperator();
+    }
+
     void accept(){
         if(!error){
             token = tok.get();
+
+            u32 pos = codegen.tell();
+            if(pos != a2lpos){
+                a2lpos = pos;
+                a2l.seek(pos);
+                a2l << u16(tok.getLine());
+            }
             // LOGD("T:", tok.getText()[0], "\n");
         }
     }
@@ -393,7 +493,7 @@ class Pine {
         if(error)
             return false;
         if(token == hash){
-            token = tok.get();
+            accept();
             // LOGD("T:", tok.getText()[0], "\n");
             return true;
         }
@@ -604,6 +704,7 @@ class Pine {
     }
 
     void * (*allocator)(u32 size);
+    void (*gcLock)(bool);
 
 public:
     Pine(Tokenizer& tok, CodeGen& cg, SymTable& symTable, ResTable& resTable, u32 dataSection) :
@@ -612,12 +713,22 @@ public:
         resTable(resTable),
         codegen(cg),
         dataSection(dataSection) {
+
+        if( a2l.openRW("pine-2k/a2l", true, false) ){
+            for(u32 i=0; i<512; ++i)
+                a2l << u32(0);
+        }
+
         auto onSpillCallback =
             +[](Pine *p, u32 sym){
                  p->spill(p->symTable[sym], sym);
              };
         regAlloc.init(this, onSpillCallback);
         clearHashCache();
+    }
+
+    void setGCLock(void (*gcLock)(bool)){
+        this->gcLock = gcLock;
     }
 
     void setAllocator(void *(*allocator)(u32)){
@@ -868,105 +979,45 @@ public:
         symTable[symId].hitTemp();
     }
 
-    void binaryExpression(){
-        auto lsymId = symId;
-        auto op = token;
-        accept();
-
-        if( op == "="_token ){
-            simpleExpression();
-            assign(lsymId);
-            return;
-        }
-        bool doAssign = true;
-
-        switch( op ){
-        case "==="_token:    op = "=="_token; doAssign = false; break;
-        case "!=="_token:    op = "!="_token; doAssign = false; break;
-        case "*="_token:     op = "*"_token;    break;
-        case "/="_token:     op = "/"_token;    break;
-        case "+="_token:     op = "+"_token;    break;
-        case "-="_token:     op = "-"_token;    break;
-        case "<<="_token:    op = "<<"_token;   break;
-        case ">>="_token:    op = ">>"_token;   break;
-        case ">>>="_token:   op = ">>>"_token;  break;
-        case "&="_token:     op = "&"_token;    break;
-        case "&&="_token:    op = "&&"_token;   break;
-        case "|="_token:     op = "|"_token;    break;
-        case "||="_token:    op = "||"_token;   break;
-        case "^="_token:     op = "^"_token;    break;
-        case "%="_token:     op = "%"_token;    break;
-        default:             doAssign = false;  break;
+    bool doConstOp(u32 lkctv, u32 op, u32 kctv, Sym &sym){
+        Sym::Type type;
+        bool matched = true;
+        switch(op){
+        case "+"_token:     kctv = lkctv + kctv;           type = Sym::S32;         break;
+        case "*"_token:     kctv = lkctv * s32(kctv);      type = Sym::S32;         break;
+        case "/"_token:     kctv = lkctv / kctv;           type = Sym::S32;         break;
+        case "%"_token:     kctv = lkctv % kctv;           type = Sym::S32;         break;
+        case "-"_token:     kctv = lkctv - kctv;           type = Sym::S32;         break;
+        case "<<"_token:    kctv = lkctv << kctv;          type = Sym::S32;         break;
+        case ">>"_token:    kctv = s32(lkctv) >> kctv;     type = Sym::S32;         break;
+        case ">>>"_token:   kctv = lkctv >> kctv;          type = Sym::U32;         break;
+        case "&"_token:     kctv = lkctv & kctv;           type = Sym::S32;         break;
+        case "&&"_token:    kctv = lkctv && kctv;          type = Sym::S32;         break;
+        case "|"_token:     kctv = lkctv | kctv;           type = Sym::S32;         break;
+        case "||"_token:    kctv = lkctv || kctv;          type = Sym::S32;         break;
+        case "^"_token:     kctv = lkctv ^ kctv;           type = Sym::S32;         break;
+        case "<"_token:     kctv = lkctv < kctv;           type = Sym::BOOL;        break;
+        case ">"_token:     kctv = lkctv > kctv;           type = Sym::BOOL;        break;
+        case "<="_token:    kctv = lkctv <= kctv;          type = Sym::BOOL;        break;
+        case ">="_token:    kctv = lkctv >= kctv;          type = Sym::BOOL;        break;
+        case "!=="_token:
+        case "!="_token:    kctv = lkctv != kctv;          type = Sym::BOOL;        break;
+        case "==="_token:
+        case "=="_token:    kctv = lkctv == kctv;          type = Sym::BOOL;        break;
+        default:            matched = false;               break;
         }
 
-        if(doAssign)
-            simpleExpression();
-        else
-            unaryExpression();
-
-        if(error)
-            return;
-
-        u32 derefId = invalidSym;
-        if(doAssign){
-            auto& sym = symTable[lsymId];
-            if(sym.isDeref()){
-                derefId = lsymId;
-                lsymId = createTmpSymbol();
-                auto reg = regAlloc[lsymId];
-                sym.clearDeref();
-                load(derefId).unhitTemp();
-                auto &vsym = symTable[lsymId];
-                vsym.reg = reg.value;
-                vsym.clearKCTV();
-                codegen.LDR(reg, cg::RegLow(sym.reg));
-            }
-        }
-
-        auto &lsym = symTable[lsymId];
-        auto &rsym = symTable[symId];
-
-        bool leftDeref = lsym.isDeref();
-
-        bool bothKnown = (lsym.hasKCTV()) && rsym.hasKCTV();
-        if(bothKnown){
-            bool matched = true;
-            Sym::Type type = lsym.type;
-            u32 kctv = rsym.kctv;
-            u32 lkctv = lsym.kctv;
-            switch(op){
-            case "+"_token:     kctv = lkctv + kctv;           type = Sym::S32;         break;
-            case "*"_token:     kctv = lkctv * s32(kctv);      type = Sym::S32;         break;
-            case "/"_token:     kctv = lkctv / kctv;           type = Sym::S32;         break;
-            case "%"_token:     kctv = lkctv % kctv;           type = Sym::S32;         break;
-            case "-"_token:     kctv = lkctv - kctv;           type = Sym::S32;         break;
-            case "<<"_token:    kctv = lkctv << kctv;          type = Sym::S32;         break;
-            case ">>"_token:    kctv = s32(lkctv) >> kctv;     type = Sym::S32;         break;
-            case ">>>"_token:   kctv = lkctv >> kctv;          type = Sym::U32;         break;
-            case "&"_token:     kctv = lkctv & kctv;           type = Sym::S32;         break;
-            case "&&"_token:    kctv = lkctv && kctv;          type = Sym::S32;         break;
-            case "|"_token:     kctv = lkctv | kctv;           type = Sym::S32;         break;
-            case "||"_token:    kctv = lkctv || kctv;          type = Sym::S32;         break;
-            case "^"_token:     kctv = lkctv ^ kctv;           type = Sym::S32;         break;
-            case "<"_token:     kctv = lkctv < kctv;           type = Sym::BOOL;        break;
-            case ">"_token:     kctv = lkctv > kctv;           type = Sym::BOOL;        break;
-            case "<="_token:    kctv = lkctv <= kctv;          type = Sym::BOOL;        break;
-            case ">="_token:    kctv = lkctv >= kctv;          type = Sym::BOOL;        break;
-            case "!="_token:    kctv = lkctv != kctv;          type = Sym::BOOL;        break;
-            case "=="_token:    kctv = lkctv == kctv;          type = Sym::BOOL;        break;
-            default:            matched = false;               break;
-            }
-            if(matched){
-                symId = doAssign ? lsymId : createTmpSymbol();
-                auto &sym = symTable[symId];
-                sym.type = type;
-                sym.setKCTV(kctv);
-                lsym.hitTemp();
-                rsym.hitTemp();
-                return;
-            }
+        if(!matched)
             setError("binaryExpression: Unexpected operator");
-        }
+        sym.setKCTV(kctv);
+        sym.type = type;
+        return matched;
+    }
+
+    void doNonConstOp(u32 lsymId, u32 op, u32 rsymId, u32 assignId){
+        bool doAssign = assignId == lsymId;
+        auto &lsym = symTable[lsymId];
+        auto &rsym = symTable[rsymId];
 
         u32 tmpId = doAssign ? invalidSym : createTmpSymbol();
         u32 lhasKCTV = lsym.hasKCTV();
@@ -1152,9 +1203,9 @@ public:
 
         symId = renameSym;
 
-        if(doAssign){
-            if(derefId != invalidSym){
-                auto &ptr = load(derefId);
+        if(assignId != invalidSym){
+            if(assignId != lsymId){
+                auto &ptr = load(assignId);
                 auto &val = load(symId).unhitTemp();
                 codegen.STR(cg::RegLow(val.reg), cg::RegLow(ptr.reg));
             }else{
@@ -1168,6 +1219,141 @@ public:
             src.reg = invalidReg;
             tmp.clearKCTV();
             symId = tmpId;
+        }
+    }
+
+    void doAssignExpression(u32 lsymId, u32 op, u32 rsymId){
+        u32 assignId = lsymId;
+        bool leftDeref;
+
+        if( op == "="_token ){
+            assign(lsymId);
+            return;
+        }
+
+        {
+            auto& sym = symTable[lsymId];
+            leftDeref = sym.isDeref();
+            if(leftDeref){
+                assignId = lsymId;
+                lsymId = createTmpSymbol();
+                auto reg = regAlloc[lsymId];
+                sym.clearDeref();
+                load(assignId).unhitTemp();
+                auto &vsym = symTable[lsymId];
+                vsym.reg = reg.value;
+                vsym.clearKCTV();
+                codegen.LDR(reg, cg::RegLow(sym.reg));
+            }
+        }
+
+        auto &lsym = symTable[lsymId];
+        auto &rsym = symTable[rsymId];
+
+        if(lsym.hasKCTV() && rsym.hasKCTV()){
+            doConstOp(lsym.kctv, op, rsym.kctv, lsym);
+            symId = lsymId;
+        } else {            
+            doNonConstOp(lsymId, op, rsymId, assignId);
+        }
+        rsym.hitTemp();
+    }
+
+    void mulExpression(){
+        unaryExpression();
+        while(!error && isMulOperator(token)){
+            auto lsymId = symId;
+            u32 op = token;
+            accept();
+            unaryExpression();
+            if(error) return;
+            auto &lsym = symTable[lsymId];
+            auto &rsym = symTable[symId];
+            if(lsym.hasKCTV() && rsym.hasKCTV()){
+                symId = createTmpSymbol();
+                doConstOp(lsym.kctv, op, rsym.kctv, symTable[symId]);
+            } else {
+                doNonConstOp(lsymId, op, symId, invalidSym);
+            }
+            rsym.hitTemp();
+            lsym.hitTemp();
+        }
+    }
+
+    void sumExpression(){
+        mulExpression();
+        while(!error && isSumOperator(token)){
+            auto lsymId = symId;
+            auto op = token;
+            accept();
+            mulExpression();
+            if(error) return;
+            auto &lsym = symTable[lsymId];
+            auto &rsym = symTable[symId];
+            if(lsym.hasKCTV() && rsym.hasKCTV()){
+                symId = createTmpSymbol();
+                doConstOp(lsym.kctv, op, rsym.kctv, symTable[symId]);
+            } else {
+                doNonConstOp(lsymId, op, symId, invalidSym);
+            }
+            rsym.hitTemp();
+            lsym.hitTemp();
+        }
+    }
+
+    void compareExpression(){
+        sumExpression();
+        while(!error && isCompareOperator()){
+            auto lsymId = symId;
+            auto op = token;
+            accept();
+            sumExpression();
+            if(error) return;
+            auto &lsym = symTable[lsymId];
+            auto &rsym = symTable[symId];
+            if(lsym.hasKCTV() && rsym.hasKCTV()){
+                symId = createTmpSymbol();
+                doConstOp(lsym.kctv, op, rsym.kctv, symTable[symId]);
+            } else {
+                doNonConstOp(lsymId, op, symId, invalidSym);
+            }
+            rsym.hitTemp();
+            lsym.hitTemp();
+        }
+    }
+
+    void logicExpression(){
+        compareExpression();
+        u32 op;
+        while(!error && isLogicOperator(token)){
+            auto lsymId = symId;
+            auto op = token;
+            accept();
+            compareExpression();
+            if(error) return;
+            auto &lsym = symTable[lsymId];
+            auto &rsym = symTable[symId];
+            if(lsym.hasKCTV() && rsym.hasKCTV()){
+                symId = createTmpSymbol();
+                doConstOp(lsym.kctv, op, rsym.kctv, symTable[symId]);
+            } else {
+                doNonConstOp(lsymId, op, symId, invalidSym);
+            }
+            rsym.hitTemp();
+            lsym.hitTemp();
+        }
+    }
+
+    void simpleExpression(){
+        logicExpression();
+        while(!error && isAssignOperator()){
+            auto lsymId = symId;
+            auto op = getNonAssignOperator();
+            accept();
+            logicExpression();
+            if(error) return;
+            doAssignExpression( lsymId, op, symId );
+            hitTmpSym(symId);
         }
     }
 
@@ -1350,6 +1536,7 @@ public:
             setError("Unexpected token (not [)");
             return;
         }
+        gcLock(true);
         auto ptr = reinterpret_cast<u32*>(0x20004000 + arrayId * 4);
         u32 start = arrayId;
         while(!error && tok.getClass() != TokenClass::Eof){
@@ -1375,6 +1562,7 @@ public:
         u32 byteSize = (arrayId - start) << 2;
         // LOG("Creating array of size ", byteSize, "\n");
         void *out = allocator(byteSize);
+        gcLock(false);
         memcpy(out, ptr, byteSize);
         arrayId = start;
         u32 tmpId = createTmpSymbol();
@@ -1388,8 +1576,16 @@ public:
         u32 len = 0;
         u32 hash = 5381 * 31 + '"';
         while(tok.isString()){
+            char ch = tok.getText()[0];
+            if(ch == '\\'){
+                ch = tok.getText()[1];
+                switch(ch){
+                case 'n': ch = 10; break;
+                default: break;
+                }
+            }
             len++;
-            hash = hash * 31 + tok.getText()[0];
+            hash = hash * 31 + ch;
             accept();
         }
         File *file = resTable.write(hash);
@@ -1397,7 +1593,15 @@ public:
             tok.setLocation(start - 3, line);
             accept();
             for(u32 i = 0; i < len; ++i){
-                (*file) << tok.getText()[0];
+                char ch = tok.getText()[0];
+                if(ch == '\\'){
+                    ch = tok.getText()[1];
+                    switch(ch){
+                    case 'n': ch = 10; break;
+                    default: break;
+                    }
+                }
+                (*file) << ch;
                 accept();
             }
             (*file) << '\0';
@@ -1429,6 +1633,81 @@ public:
             setError("callArgs 2: Unexpected token (not ))");
             return;
         }
+    }
+
+    void callMinMax(u32 argc, u32 *argv, bool minMode){
+        if(argc != 2){
+            setError("min/max expect two arguments");
+            return;
+        }
+        auto &argLeft = symTable[argv[0]];
+        auto &argRight = symTable[argv[1]];
+        symId = createTmpSymbol();
+        auto &sym = symTable[symId];
+
+        if(argLeft.hasKCTV() && argRight.hasKCTV()){
+            if(minMode){
+                sym.setKCTV(s32(argLeft.kctv) < s32(argRight.kctv) ? argLeft.kctv : argRight.kctv);
+            } else {
+                sym.setKCTV(s32(argLeft.kctv) > s32(argRight.kctv) ? argLeft.kctv : argRight.kctv);
+            }
+            return;
+        }
+
+        auto Rx = regAlloc[symId];
+        sym.reg = Rx.value;
+        sym.clearKCTV();
+        regAlloc.hold(Rx);
+
+        load(argv[0]);
+        load(argv[1]);
+        auto Rl = cg::RegLow(argLeft.reg);
+        auto Rr = cg::RegLow(argRight.reg);
+
+        auto next = nextLabel++;
+        
+        codegen.MOVS(Rx, Rl);
+        if(minMode){
+            codegen.CMP(Rl, Rr);
+        }else{
+            codegen.CMP(Rr, Rl);
+        }
+        codegen.B(cg::LE, next);
+        codegen.MOVS(Rx, Rr);
+        codegen[next];
+
+        regAlloc.release(Rx);
+    }
+
+    void callAbs(u32 argc, u32 *argv){
+        if(argc != 1){
+            setError("abs expects one argument");
+            return;
+        }
+        auto &arg = symTable[argv[0]];
+        symId = createTmpSymbol();
+        auto &sym = symTable[symId];
+        if(arg.hasKCTV()){
+            sym.setKCTV(s32(arg.kctv) < 0 ? -arg.kctv : arg.kctv);
+            return;
+        }
+
+        auto Rx = regAlloc[symId];
+        sym.reg = Rx.value;
+        sym.clearKCTV();
+        regAlloc.hold(Rx);
+
+        load(argv[0]);
+        auto Ry = cg::RegLow(arg.reg);
+        regAlloc.hold(Ry);
+
+        codegen.ASRS(Rt, Ry, 31);
+        codegen.LSRS(Rx, Ry, 31);
+        codegen.EORS(Rt, Ry);
+        codegen.ADDS(Rx, Rt);
+
+        regAlloc.release(Ry);
+        regAlloc.release(Rx);
     }
 
     void callPeek(u32 argc, u32 *argv){
@@ -1538,7 +1817,12 @@ public:
 
     bool callIntrinsic(u32 symId, u32 argc, u32* argv){
         auto &sym = symTable[symId];
+        if(sym.scopeId != 0)
+            return false;
         switch(sym.hash){
+        case "abs"_token: callAbs(argc, argv); return true;
+        case "min"_token: callMinMax(argc, argv, true); return true;
+        case "max"_token: callMinMax(argc, argv, false); return true;
         case "peek"_token: callPeek(argc, argv); return true;
         case "poke"_token: callPoke(argc, argv); return true;
         case "pressed"_token:
@@ -1599,28 +1883,25 @@ public:
             loadToRegister(argv[i], i);
             regAlloc.assign(argv[i], cg::RegLow(i), true);
         }
-        if(argc > 0){
-            for(u32 i=0; i<argc; ++i){
-                if(i && !regAlloc.isLocked(cg::RegLow(i))){
-                    LOG("BUG\n");
-                }
-                symTable[argv[i]].hitTemp();
+        for(u32 i=0; i<argc; ++i){
+            if(i && !regAlloc.isLocked(cg::RegLow(i))){
+                LOG("BUG\n");
             }
-            commitScratch();
-            load(symId);
-        }else{
-            commitScratch();
-            load(symId);
+            symTable[argv[i]].hitTemp();
         }
-        {
-            auto &call = symTable[symId];
+        commitScratch();
 
-            if(call.reg < argc){
-                setError("REGALLOC BUG\n");
-                return;
-            }
-            codegen.BLX(cg::RegLow(call.reg));
+        auto here = codegen.tell() + baseAddress;
+        auto &call = symTable[symId];
+        if((call.type == Sym::Type::FUNCTION) && (call.kctv > here - 0x7FFFFF)){
+            // codegen.BKPT(0);
+            codegen.BL(call.kctv - functionAddress);
+//            LOG("CKCTV ", (void*) call.kctv, " ", (void*) functionAddress, "\n");
+        }else{
+            loadToRegister(symId, tempReg);
+            codegen.BLX(Rt);
         }
+
         for(u32 i=0; i<argc; ++i)
             regAlloc.release(cg::RegLow(i));
         invalidateRegisters(false);
@@ -1630,22 +1911,6 @@ public:
         sym.clearKCTV();
         sym.reg = 0;
         regAlloc.assign(symId, cg::R0);
-    }
-
-    void simpleExpression(){
-        if(error) return;
-        unaryExpression();
-        while(!error && tok.isOperator() && token != "="_token)
-            binaryExpression();
-        if(accept("="_token)){
-            auto lsymId = symId;
-            if(symId == invalidSym){
-                setError("simpleExpression: Invalid assignment");
-                return;
-            }
-            simpleExpression();
-            assign(lsymId);
-        }
     }
 
     void expression(){
@@ -1990,25 +2255,42 @@ public:
         u32 itId = createTmpSymbol();
         u32 maxId = createTmpSymbol();
 
+        // if(symTable[arrId].isInRange(0x10000000, 0x10008000)){
+        //     u32 kctv = symTable[arrId].kctv;
+        //     auto array = reinterpret_cast<u32*>(kctv);
+        //     u32 ubound = array[-1] & 0xFFFF;
+        //     auto &it = symTable[itId].unhitTemp();
+        //     auto &max = symTable[maxId].unhitTemp();
+        //     if(!ubound){
+        //         codegen.B(lblBreak);
+        //     }else{
+        //         max.setKCTV(ubound);
+        //         it.setKCTV(kctv);
+        //         flush();
+        //         codegen.B(lblEnter);
+        //     }
+        // }else
         {
             load(arrId);
             assign(itId);
             auto &it = symTable[itId];
             auto &max = symTable[maxId];
             max.setKCTV(-4);
-            load(maxId);
-            max.unhitTemp();
+            load(maxId).unhitTemp();
+            load(itId).unhitTemp();
             codegen.LDRH(cg::RegLow(max.reg), cg::RegLow(it.reg), cg::RegLow(max.reg));
             codegen.CMP( cg::RegLow(max.reg), 0 );
             max.setDirty();
+            it.setDirty();
+            it.clearKCTV();
             preserveFlags++;
-            commitAll();
-            invalidateRegisters();
+            flush();
             preserveFlags--;
             codegen.B(cg::EQ, lblBreak);
-            codegen[lblTest];
             max.unhitTemp();
         }
+
+        codegen[lblTest];
 
         {
             auto valReg = regAlloc[valueId];
@@ -2021,6 +2303,8 @@ public:
             it.setDirty();
             it.unhitTemp();
         }
+        
+        codegen[lblEnter];
 
         
         if(token == "{"_token)
@@ -2030,8 +2314,7 @@ public:
         {
             flush();
             codegen[lblContinue];
-            auto &max = load(maxId);
-            max.unhitTemp();
+            auto &max = load(maxId).unhitTemp();
             codegen.SUBS( cg::RegLow(max.reg), 1);
             max.setDirty();
             commit(max, maxId);
@@ -2063,8 +2346,20 @@ public:
         u32 arrId = symId;
         u32 itId = createTmpSymbol();
         u32 maxId = createTmpSymbol();
+        u32 ubound = 0;
 
-        {
+        if(symTable[arrId].isInRange(0x10000000, 0x10008000)){
+            auto array = reinterpret_cast<u32*>(symTable[arrId].kctv);
+            ubound = array[-1] & 0xFFFF;
+            auto &it = symTable[itId];
+            it.setKCTV(0);
+            auto &value = symTable[valueId];
+            if(!value.hasKCTV() || value.kctv){
+                value.setKCTV(0);
+                value.setDirty();
+            }
+            flush();
+        } else {
             load(arrId);
             assign(itId);
             auto &it = load(itId).unhitTemp();
@@ -2080,40 +2375,55 @@ public:
             preserveFlags++;
             flush();
             preserveFlags--;
-            codegen.B(cg::EQ, lblBreak);
-            codegen[lblTest];
+            codegen.B(lblTest);
             max.unhitTemp();
         }
-
-        {
-            auto valReg = regAlloc[valueId];
-            auto &value = symTable[valueId];
-            auto &it = load(itId).unhitTemp();
-            codegen.MOVS(valReg, cg::RegLow(it.reg));
-            codegen.ADDS(cg::RegLow(it.reg), cg::RegLow(it.reg), 1);
-            it.setDirty();
-            spill(it, itId);
-            value.reg = valReg.value;
-            value.setDirty();
-            value.clearKCTV();
-        }
+        codegen[lblEnter];
 
         if(token == "{"_token)
             block();
         else
             statements();
 
+        flush();
+        codegen[lblContinue];
+        flush();
+
         {
-            flush();
-            codegen[lblContinue];
-            auto &max = load(maxId);
-            max.unhitTemp();
-            codegen.SUBS( cg::RegLow(max.reg), 1);
-            max.setDirty();
-            commit(max, maxId);
-            codegen.B(cg::NE, lblTest);
-            codegen[lblBreak];
+            auto &it = load(itId).unhitTemp();
+            codegen.ADDS( cg::RegLow(it.reg), 1);
+            it.setDirty();
+            it.clearKCTV();
+            if(ubound){
+                if(ubound <= 0xFF){
+                    codegen.CMP(cg::RegLow(it.reg), ubound);
+                }else{
+                    codegen.LDRI(Rt, ubound);
+                    codegen.CMP(cg::RegLow(it.reg), Rt);
+                }
+            }else{
+                auto &max = load(maxId).unhitTemp();
+                codegen.CMP(cg::RegLow(it.reg), cg::RegLow(max.reg));
+                spill(max, maxId);
+            }
+            spill(it, itId);
         }
+        
+        {
+            codegen[lblTest];
+            codegen.B(cg::EQ, lblBreak);
+            auto &value = symTable[valueId];
+            auto &it = load(itId).unhitTemp();
+            value.reg = it.reg;
+            spill(it, itId);
+            regAlloc.assign(valueId, cg::RegLow(value.reg));
+            value.setDirty();
+            value.clearKCTV();
+            spill(value, valueId);
+        }
+
+        codegen.B(lblEnter);
+        codegen[lblBreak];
 
         symTable[maxId].hitTemp();
         symTable[itId].hitTemp();
@@ -2310,7 +2620,7 @@ public:
         if(!scopeSize)
             codegen.NOP();
 
-        codegen.PUSH((regAlloc.getUseMap() & 0xF0) | 0x100);
+        codegen.PUSH((regAlloc.getUseMap() & 0xF0) | 0x100 | 0x80);
 
         if(scopeSize){
             codegen.SUB(SP, scopeSize << 2);
@@ -2321,7 +2631,7 @@ public:
             addr += 2;
         }
 
-        codegen.POP((regAlloc.getUseMap() & 0xF0) | 0x100);
+        codegen.POP((regAlloc.getUseMap() & 0xF0) | 0x100 | 0x80);
         codegen.POOL();
         codegen.link();
     }
@@ -2372,12 +2682,12 @@ public:
         scopeId = ++maxScope;
         returnLabel = nextLabel++;
         scopeSize = 0;
-        u32 addr = baseAddress + codegen.tell() | 1;
+        functionAddress = baseAddress + codegen.tell() | 1;
         tok.setLocation(sym.init, sym.line);
-        sym.setMemInit(addr);
+        sym.setMemInit(functionAddress);
         sym.type = Sym::FUNCTION;
         beginFunction();
-        sym.kctv = addr;
+        sym.kctv = functionAddress;
         clearAllKCTV();
 
         accept(); // function
@@ -2396,10 +2706,11 @@ public:
             codegen.LDRI(R0, 0);
             codegen[cg::Label(returnLabel)];
 
-            endFunction(addr);
+            endFunction(functionAddress);
 
             auto &sym = symTable[symId];
-            sym.setMemInit(addr);
+            sym.setMemInit(functionAddress);
+            sym.kctv = functionAddress;
             if(isConstexpr)
                 sym.setConstexpr();
 
@@ -2411,7 +2722,9 @@ public:
         return globalScopeSize;
     }
 
-    void parseGlobal(){
+    void parseGlobal(u32 baseAddress){
+        this->baseAddress = baseAddress + codegen.tell();
+        functionAddress = this->baseAddress | 1;
         using namespace cg;
         beginFunction();
         scopeSize = 0;

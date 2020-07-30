@@ -103,6 +103,13 @@ public:
                 tokClass = TokenClass::Eof;
                 return 0;
             }
+            if(next == '\\'){
+                strToken[0] = next;
+                read();
+                strToken[1] = next;
+                read();
+                return 0;
+            }
             if (next != strDelim) {
                 strToken[0] = next;
                 read();
@@ -253,8 +260,12 @@ public:
                 if(next == '='){
                     strToken[1] = next;
                     read();
-                    if(*s != '=')
-                        return ((5381 * 31) + *s) * 31 + '=';
+                    if(*s == '=' && next == '='){
+                        strToken[2] = next;
+                        read();
+                        return (((5381 * 31) + *s) * 31 + *s) * 31 + '=';
+                    }
+                    return ((5381 * 31) + *s) * 31 + '=';
                 }
                 if(next == *s){
                     strToken[1] = next;
