@@ -68,6 +68,15 @@ namespace pine {
         arrays = 0;
     }
 
+    inline u32 *arrayFromPtr(u32 x){
+        auto ptr = reinterpret_cast<u32*>(x);
+        for(ArrayHeader array(arrays); array; ++array){
+            if((array.data <= ptr) && (array.data + (array.length << 2)) > ptr)
+                return array.data;
+        }
+        return nullptr;
+    }
+
     inline void gc(u32 **stackBottom, u32 **stackTop, u32 **globals, u32 globalCount){
         u32 markCount = 0;
         // LOG("GC\n");
@@ -151,7 +160,14 @@ namespace pine {
     inline u32* arrayCtr(u32 size){
         auto stackTop = reinterpret_cast<u32 **>(0x10008000);
         u32** stackBottom;
-        __asm__ volatile("mov %[stackBottom], SP":[stackBottom] "+l" (stackBottom)::"r4", "r5", "r6", "r7");
+        u32 retaddr;
+        __asm__ volatile(
+            "mov %[stackBottom], SP\n"
+            "mov %[retaddr], LR\n"
+            :
+            [stackBottom] "+l" (stackBottom),
+            [retaddr] "+l" (retaddr)
+            ::"r4", "r5", "r6", "r7");
         auto globals = reinterpret_cast<u32 **>(0x20004000);
         if(!gcLockCount)
             gc(stackBottom, stackTop, globals, globalCount);
@@ -159,7 +175,10 @@ namespace pine {
         auto array = new u32[size + 1];
         if(!array){
             LOG("Out of Memory ", size, "\n");
-            while(true);
+            if(retaddr >= 0x20000000 && retaddr < 0x20000800){
+                reinterpret_cast<u16*>(retaddr&~1)[0] = 0b0111000001000000;
+            }
+            return nullptr;
         }
 
         // LOG("Alloc ", size, " @ ", array, "\n");
@@ -205,19 +224,35 @@ namespace pine {
                                        array[-1] |= 1 << 17;
                                        return array;
                                    });
-                setConstant("Array", arrayCtr, true);
+                pine.setSetRooted([](u32 ptr){
+                                      auto array = arrayFromPtr(ptr);
+                                      if(array){
+                                          array[-1] |= 1 << 17;
+                                      }
+                                  });
+                setConstant("Array", arrayCtr, true, true);
                 MemOps::set(reinterpret_cast<void*>(codeSection), 0, 0x800);
             }
 
         template<typename type>
-        void setConstant(const char *name, type&& value, bool isConstexpr = false){
+        void setConstant(const char *name, type&& value, bool isConstexpr = false, bool isRestricted = false){
             auto &sym = pine.createGlobal(name);
             sym.setConstant(value);
             if(isConstexpr)
                 sym.setConstexpr();
+            if(isRestricted)
+                pine.addRestricted(reinterpret_cast<void*>(value));
         }
 
-        bool compile(){
+        const char *getError(){
+            return pine.getError();
+        }
+
+        u32 getLine(){
+            return pine.getLine();
+        }
+
+        bool compile(bool a2lEnabled){
             using namespace cg;
             // cg.LDR(R0, 0xCCBBDDEE);
             // cg.LDR(R1, 1);
@@ -231,6 +266,9 @@ namespace pine {
             // cg[Label(u32(-2))];
             // cg.NOP();
             // cg.link();
+
+            if(a2lEnabled)
+                pine.enableA2L();
 
             pine.parseGlobal(codeSection);
             if(pine.getError())
@@ -270,10 +308,17 @@ namespace pine {
                                                         });
 
             u32 id = 0, len = 0;
+            u32 uninit = 0;
             for(auto &sym : pine.symbols()){
                 // if(sym.type == Sym::Type::FUNCTION){
                 //     LOG("Func @ 0x", (void*) sym.kctv, "\n");
                 // }
+                if(!sym.memInit() && !sym.isConstant() && !sym.isTemp()){
+                    pine.setError("Variable not declared", sym.line);
+                    return false;
+                    LOG("Global ", id, " not declared\n");
+                    uninit++;
+                }
                 if(sym.address != 0xFFFF){
                     auto address = reinterpret_cast<u32*>( dataSection + (sym.address << 2) );
                     // LOG("MemInit ", id, " ", (void*) address, " ", (void *) sym.init, "\n");
@@ -286,6 +331,9 @@ namespace pine {
                 }
                 id++;
             }
+
+            if(uninit)
+                LOG("WARNING: ", uninit, " uninitialized variables.\n");
 
             LOG("PROGMEM: ", cg.tell(), " bytes (", (cg.tell() * 100) / 2048, "%) used.\n");
 
@@ -317,6 +365,7 @@ namespace pine {
 
         void run(){
             if(wasInit) return;
+            pine.flushA2L();
             wasInit = true;
             auto func = writer.function<void()>();
             func();

@@ -300,12 +300,19 @@ class Pine {
     CodeGen& codegen;
     u32 nextLabel = 1, returnLabel = 0;
     u32 preserveFlags = 0;
+    u32 lblBreak = ~u32{}, lblContinue = ~u32{};
+    bool strict = false;
+    u32 a2lpos = ~u32{};
+    u32 newLock = 0;
+
+    void * (*allocator)(u32 size);
+    void (*gcLock)(bool);
+    void (*setRooted)(u32 ptr);
+    u32 restrictCall[4] = {0,0,0,0};
+
     SymTable& symTable;
     ResTable& resTable;
     File a2l;
-    u32 a2lpos = ~u32{};
-
-    u32 lblBreak = ~u32{}, lblContinue = ~u32{};
 
     void toBranch(u32 label){
         auto& sym = symTable[symId].hitTemp();
@@ -339,7 +346,7 @@ class Pine {
         column = tok.getColumn();
         LOG(error, " line: ", line, " column:", column, "\n");
         LOG("Text: ", (const char *) tok.getText(), "\n");
-        while(true);
+        // while(true);
     }
 
     bool isKeyword(){
@@ -480,7 +487,7 @@ class Pine {
             token = tok.get();
 
             u32 pos = codegen.tell();
-            if(pos != a2lpos){
+            if(a2l && pos != a2lpos){
                 a2lpos = pos;
                 a2l.seek(pos);
                 a2l << u16(tok.getLine());
@@ -703,9 +710,6 @@ class Pine {
         return symTable[symId];
     }
 
-    void * (*allocator)(u32 size);
-    void (*gcLock)(bool);
-
 public:
     Pine(Tokenizer& tok, CodeGen& cg, SymTable& symTable, ResTable& resTable, u32 dataSection) :
         tok(tok),
@@ -714,17 +718,31 @@ public:
         codegen(cg),
         dataSection(dataSection) {
 
-        if( a2l.openRW("pine-2k/a2l", true, false) ){
-            for(u32 i=0; i<512; ++i)
-                a2l << u32(0);
-        }
-
         auto onSpillCallback =
             +[](Pine *p, u32 sym){
                  p->spill(p->symTable[sym], sym);
              };
         regAlloc.init(this, onSpillCallback);
         clearHashCache();
+    }
+
+    void flushA2L(){
+        a2l.close();
+    }
+
+    void enableA2L(){
+        if( a2l.openRW("pine-2k/a2l", true, false) ){
+            for(u32 i=0; i<512; ++i)
+                a2l << u32(0);
+        }
+    }
+
+    u32 getLine(){
+        return line;
+    }
+
+    void setSetRooted(void (*sr)(u32)){
+        this->setRooted = sr;
     }
 
     void setGCLock(void (*gcLock)(bool)){
@@ -1067,8 +1085,17 @@ public:
                     if(rkctv == 1){
                         break;
                     }else if(isPOT){
-                        rightImmFunc = &CodeGen::ASRS;
+                        // rightImmFunc = &CodeGen::ASRS;
                         rkctv = shifts;
+
+                        rsym.hitTemp();
+                        auto &lsym = load(lsymId);
+                        if(!doAssign) commit(lsym, lsymId);
+                        else lsym.setDirty();
+                        codegen.LSRS(Rt, cg::RegLow(lsym.reg), 31);
+                        codegen.ADDS(cg::RegLow(lsym.reg), Rt);
+                        codegen.ASRS(cg::RegLow(lsym.reg), rkctv);
+                        renameSym = lsymId;
                         break;
                     }
                 }
@@ -1400,7 +1427,7 @@ public:
         return id;
     }
 
-    u32 createSymbol(const char *name, u32 scopeId){
+    u32 createSymbol(const char *name, u32 scopeId, bool isImplicit){
         u32 token = hash(name);
         u32 id = 0;
         u32 evict = invalidSym;
@@ -1433,26 +1460,40 @@ public:
         sym.setKCTV(0);
         sym.clearDirty();
         sym.type = Sym::Type::U32;
+        sym.line = tok.getLine();
+        // if(scopeId == 0 && isImplicit){
+        //     LOG(id, ") ", name, "\n");
+        // }else{
         LOGD("declared variable ", name, " ", id, " hash:", sym.hash, "\n");
+        // }
         return id;
     }
 
-    u32 createSymbol(u32 scopeId){
+    u32 createSymbol(u32 scopeId, bool isImplicit){
         const char *name = varName();
         if(error) return invalidSym;
-        u32 id = createSymbol(name, scopeId);
+        u32 id = createSymbol(name, scopeId, isImplicit);
         accept();
         return id;
     }
 
-    Sym &createGlobal(const char *name){
-        return symTable[createSymbol(name, 0)];
+    void addRestricted(void *ptr){
+        for(u32 i=0; i<4; ++i){
+            if(!restrictCall[i]){
+                restrictCall[i] = reinterpret_cast<u32>(ptr);
+                return;
+            }
+        }
     }
 
-    u32 findOrCreateSymbol(u32 scopeId=0){
+    Sym &createGlobal(const char *name){
+        return symTable[createSymbol(name, 0, false)];
+    }
+
+    u32 findOrCreateSymbol(u32 scopeId, bool isImplicit){
         u32 symId = findSymbol(token, scopeId);
         if(symId == invalidSym){
-            symId = createSymbol(0);
+            symId = createSymbol(0, true);
             symTable[symId].clearKCTV();
         }else{
             accept();
@@ -1518,7 +1559,7 @@ public:
         } else if(tok.isString()){
             stringLiteral();
         } else if(isName()) {
-            symId = findOrCreateSymbol(scopeId);
+            symId = findOrCreateSymbol(scopeId, true);
         } else {
             setError("value: Unexpected token");
         }
@@ -1838,8 +1879,12 @@ public:
     void writeCall(u32 symId, u32 argc, u32* argv){
         if(error)
             return;
-        if(callIntrinsic(symId, argc, argv))
+        if(callIntrinsic(symId, argc, argv)){
+            auto &sym = symTable[symId];
+            if(!sym.memInit())
+                sym.setMemInit(0);
             return;
+        }
         LOGD("Write call\n");
         bool isConstexpr;
         {
@@ -1848,6 +1893,15 @@ public:
             if(call.hasKCTV() && call.kctv == 0)
                 call.clearKCTV();
             isConstexpr = argc <= 4 && call.isConstexpr();
+            if(isConstexpr && newLock == 0){
+                // (call.hash != "Array"_token || newLock != 0);
+                for(u32 i=0; i<4 && restrictCall[i]; ++i){
+                    if(call.kctv == restrictCall[i]){
+                        isConstexpr = false;
+                        break;
+                    }
+                }
+            }
         }
 
         {
@@ -1989,6 +2043,10 @@ public:
             return;
         auto& evict = symTable[symId];
         auto& sym = symTable[id];
+
+        if(sym.scopeId == 0 && !sym.memInit() && !sym.isConstant() && !sym.isTemp())
+            sym.setMemInit(0);
+
         if(sym.isDeref()){
             LOGD("Deref store ", id, "[0] = ", symId, "\n");
             sym.clearDeref();
@@ -2019,13 +2077,15 @@ public:
     void constDecl(){
         u32 id;
         do {
-            id = createSymbol(scopeId);
+            id = createSymbol(scopeId, false);
             if(error) return;
             if(!accept("="_token)){
                 setError("Const without initializer\n");
                 return;
             }
+            newLock++;
             simpleExpression();
+            newLock--;
             auto &rval = symTable[symId];
             rval.hitTemp();
             // assign(id);
@@ -2035,6 +2095,7 @@ public:
                 return;
             }else{
                 sym.setConstant(rval.kctv);
+                setRooted(rval.kctv);
             }
         }while(accept(","_token));
         symId = id;
@@ -2043,7 +2104,7 @@ public:
     void varDecl(){
         u32 id;
         do {
-            id = createSymbol(scopeId);
+            id = createSymbol(scopeId, false);
             if(error) return;
             if(accept("="_token)){
                 simpleExpression();
@@ -2084,7 +2145,9 @@ public:
                 return;
             }
 
+            newLock++;
             prenExpression();
+            newLock--;
             if(error)
                 return;
 
@@ -2579,7 +2642,7 @@ public:
                 setError("Too many arguments");
                 return;
             }
-            u32 id = createSymbol(scopeId);
+            u32 id = createSymbol(scopeId, false);
             if(error) return;
             auto &sym = symTable[id];
             sym.clearKCTV();
@@ -2595,6 +2658,11 @@ public:
 
     auto& symbols(){
         return symTable;
+    }
+
+    void setError(const char *msg, u32 line){
+        error = msg;
+        this->line = line;
     }
 
     const char *getError(){
@@ -2644,7 +2712,7 @@ public:
             return;
         }
 
-        u32 fsymId = findOrCreateSymbol(0);
+        u32 fsymId = findOrCreateSymbol(0, false);
         auto& sym = symTable[fsymId];
         if(sym.type == Sym::UNCOMPILED){
             setError("Function redefinition");
@@ -2692,6 +2760,7 @@ public:
 
         accept(); // function
 
+        // LOG((const char *)tok.getText(), "\n");
         accept(); // name
 
         declArgs();
@@ -2700,7 +2769,7 @@ public:
 
         if(error){
             LOG("ERROR on line ", line, " column ", column, ": ", error, "\nOn token: [", tok.getText()[0], (tok.getText()[1] ?: '@'), "|", tok.getClass(), "]\n");
-            while(true);
+            // while(true);
         } else {
             flush();
             codegen.LDRI(R0, 0);
@@ -2738,7 +2807,7 @@ public:
 
         if(error){
             LOGD("ERROR on line ", line, " column ", column, ": ", error, "\nOn token: [", tok.getText()[0], (tok.getText()[1] ?: '@'), "|", tok.getClass(), "]\n");
-            while(true);
+            // while(true);
         } else {
             flush();
             u32 addr;

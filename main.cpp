@@ -14,6 +14,10 @@ using u32 = pine::u32;
 using s32 = pine::s32;
 using u16 = pine::u16;
 
+constexpr auto version = 10400;
+
+void editProject(u32 crashLocation, u32 errLine, const char *msg = nullptr);
+
 const auto magic = 0xFEEDBEEF;
 const auto magicPtr = reinterpret_cast<volatile u32*>(0x20004000);
 const auto reset = 0x05FA0004;
@@ -32,6 +36,7 @@ union {
     };
     struct {
         char *src;
+        const char *msg;
         u32 firstLine;
         u16 lineCount;
         u16 highlight;
@@ -43,13 +48,13 @@ extern const unsigned char font5x7[];
 extern const unsigned char fontC64[];
 extern const unsigned char fontZXSpec[];
 
+bool devmode = ((volatile uint32_t *) 0xE000ED00)[0] == 1947;
 bool mirror;
 bool flip;
 u32 fmt;
 u32 numPad = 0;
 Audio::Sink<2, PROJ_AUD_FREQ> audio;
 Audio::Note note;
-constexpr auto version = 1;
 
 uint32_t indexSize;
 File *musicFile = nullptr;
@@ -147,6 +152,7 @@ void loadMenuColors(){
     File theme;
     if(theme.openRO("pine-2k/theme")){
         theme >> PD::bgcolor >> PD::color;
+        devmode = theme.read<char>();
     }else{
         PD::bgcolor = 209;
         PD::color = 88;
@@ -524,6 +530,8 @@ char *readFileEx(char *path, char *ptr){
         u32 size = file.size();
         if(size & 3) size += 4;
         ptr = reinterpret_cast<char*>(pine::arrayCtr(size >> 2));
+    // }else{
+    //     LOG("Load to ptr\n");
     }
     file.read(ptr, file.size());
     return ptr;
@@ -642,7 +650,7 @@ void tile(u32 x, u32 y, u32 t){
         auto ptr = reinterpret_cast<const pine::u8 *>(t);
         auto w = *ptr++;
         auto h = *ptr++;
-        PD::drawTile(x, y, ptr, PD::color, w == PROJ_TILE_W * 2);
+        PD::drawTile(x, y, ptr + ((t >= 0x10000000) << 1), PD::color, w == PROJ_TILE_W * 2);
     }else{
         PD::drawColorTile(x, y, t);
     }
@@ -740,6 +748,8 @@ void exec(){
     run(path);
 }
 
+extern unsigned int __allocated_memory__;
+
 void run(const char *path){
     cleanup();
 
@@ -764,7 +774,7 @@ void run(const char *path){
     pine.setConstant("justPressed", justPressed);
     pine.setConstant("time", PC::getTime);
     pine.setConstant("io", read);
-    pine.setConstant("file", readFile, true);
+    pine.setConstant("file", readFile, true, true);
     pine.setConstant("save", writeFile);
     pine.setConstant("music", music);
     pine.setConstant("sound", sound);
@@ -778,7 +788,8 @@ void run(const char *path){
                                   execHash = hash;
                                   onUpdate = exec;
                               });
-    if(pine.compile()){
+    // LOG("DYNMEM: ", __allocated_memory__, "\n");
+    if(pine.compile(devmode)){
         if( s32(0x800 - pine::globalCount * 4) > 0 ){
             resTable.setCache(
                 reinterpret_cast<u32*>(0x20004000 + pine::globalCount * 4),
@@ -790,6 +801,12 @@ void run(const char *path){
         pine.run();
         if(!onUpdate)
             onUpdate = pine.getCall<void()>("update");
+
+        extern char   _pvHeapStart; /* Set by linker.  */
+        u32 total = (reinterpret_cast<u32>(&_pvHeapStart) - 0x10000000) +  __allocated_memory__;
+        LOG("DATAMEM: ", total, " bytes (", total * 100 / (32*1024), "%) used.\n");
+    } else {
+        editProject(~u32{}, pine.getLine(), pine.getError());
     }
     if(!onUpdate)
         onUpdate = nopUpdate;
@@ -821,6 +838,7 @@ void updateEditor(){
         dirty = true;
     } else if(PB::pressed(BTN_UP)){
         firstLine--;
+        if(s32(firstLine) < 0) firstLine = 0;
         dirty = true;
     } else if(PB::pressed(BTN_C)){
         exitPine();
@@ -837,18 +855,23 @@ void updateEditor(){
     textFiller->clear();
     u32 limit = std::min<u32>(firstLine + (176 / 8), mode.lineCount - 1);
     for( u32 i = firstLine; i < limit; ++i ){
-        if(i == (mode.highlight - 1)){
+        int c = fmt + 8;
+        const char *line = mode.src + lineBuffer[i];
+        if(i == limit - 1 && mode.msg){
+            c = 170;
+            line = mode.msg;
+        }
+        if(i == (mode.highlight - 1) || c == 170){
             for( u32 j = 0; j<27; ++j )
-                PD::drawColorTile(j, i - firstLine, fmt + 8);
+                PD::drawColorTile(j, i - firstLine, c);
             PD::drawColorTile(27, i - firstLine, 174);
         }
 
-        char *line = mode.src + lineBuffer[i];
         textFiller->setCursor(0, i - firstLine);
         u32 maxj = firstColumn + (220 / 6);
         for( u32 j = firstColumn; j < maxj; ++j ){
             char c = line[j];
-            if(c == 13 || c == 10)
+            if(c == 13 || c == 10 || c == 0)
                 break;
             if(c == '\t'){
                 c = ' ';
@@ -860,7 +883,7 @@ void updateEditor(){
     }
 }
 
-void editProject(u32 crashLocation){
+void editProject(u32 crashLocation, u32 errLine, const char *msg){
     cleanup();
     loadMenuColors();
     fmt = PD::bgcolor;
@@ -894,15 +917,25 @@ void editProject(u32 crashLocation){
         File a2l;
         if( a2l.openRO("pine-2k/a2l") ){
             u32 i = (crashLocation - 0x20000000) & ~1;
-            mode.highlight = 0;
-            for(; i > 0 && mode.highlight == 0; i -= 2){
+            errLine = 0;
+            for(; s32(i) > 0; i -= 2){
                 a2l.seek(i);
-                mode.highlight = a2l.read<u16>();
+                errLine = a2l.read<u16>();
+                if(errLine){
+                    errLine--;
+                    break;
+                }
             }
-            mode.firstLine = mode.highlight - 10;
-            if(s32(mode.firstLine) < 0) mode.firstLine = 0;
         }
     }
+
+    if(errLine != ~u32{}){
+        mode.highlight = errLine;
+        mode.firstLine = mode.highlight - 10;
+        if(s32(mode.firstLine) < 0) mode.firstLine = 0;
+    }
+
+    mode.msg = msg;
 }
 
 void updateMenu(){
@@ -962,14 +995,23 @@ void updateMenu(){
         draw = true;
     }
 
+    bool updateTheme = false;
     if(PB::bBtn()){
         draw = true;
-        PD::bgcolor = xorshift32(0, 255);
-        PD::color = xorshift32(0, 255);
+        if(PB::cBtn()){
+            devmode = !devmode;
+        }else{
+            PD::bgcolor = xorshift32(0, 255);
+            PD::color = xorshift32(0, 255);
+        }
+        prevselection = -1;
+        updateTheme = true;
+    }
+
+    if(updateTheme){
         File theme;
         theme.openRW("pine-2k/theme", true, false);
-        theme << PD::bgcolor << PD::color;
-        prevselection = -1;
+        theme << PD::bgcolor << PD::color << devmode;
     }
 
     if(PB::aBtn()){
@@ -986,7 +1028,7 @@ void updateMenu(){
 
         if(PB::cBtn()){
             PD::color += 7;
-            editProject(~u32{});
+            editProject(~u32{}, ~u32{});
         }else{
             PD::color = 7;
             PD::bgcolor = 0;
@@ -1000,6 +1042,11 @@ void updateMenu(){
 
     if((prevselection >> 2) != (selection >> 2)){
         fillRect(40, 220 - 80, 0, 176, PD::palette[PD::bgcolor]);
+        if(devmode){
+            PD::directcolor = PD::palette[PD::bgcolor + 1];
+            PD::setCursor(80, 0);
+            PD::print("DEV MODE");
+        }
         for(int i = 0; i < 4; ++i){
             auto dirOffset = selection >> 2 << 2;
             auto projectNumber = dirOffset + i;
@@ -1071,7 +1118,7 @@ void updateMenu(){
     PD::shiftTilemap(3, 0);
     PD::setTASWindow(220 - 40, 0, 220, 176);
     PD::update();
-    
+
     wait_ms(60);
 }
 
@@ -1090,15 +1137,15 @@ void pickProject(){
 
 void init(bool crashed, u32 crashLocation){
     PD::adjustCharStep = 0;
-    PD::bgcolor = 0;
+    loadMenuColors();
     PD::invisiblecolor = 0;
     state += PC::getTime();
     #ifdef PROJ_DEVELOPER_MODE
     PD::update();
     #endif
-    if(crashed){
+    if(crashed && devmode){
         setProjectName( ((char*)magicPtr) + 12 );
-        editProject(crashLocation);
+        editProject(crashLocation, ~u32{}, "Halt");
     }
     else exitPine();
 }
@@ -1109,6 +1156,7 @@ void update(){
     onUpdate();
 }
 
+/* */
 extern "C" {
     void __attribute__((naked)) HardFault_Handler(void) {
 
@@ -1118,6 +1166,14 @@ extern "C" {
             ldr r1, =1947       \n
             cmp r0, r1          \n
             bne 1f              \n
+            ldr r0, [sp, 0x14]  \n
+            ldr r1, =0x20000000 \n
+            cmp r0, r1          \n
+            bge 1f              \n
+            ldr r0, [sp, 0x18]  \n
+            ldr r1, =0x20000000 \n
+            cmp r0, r1          \n
+            bge 1f              \n
             bx lr               \n
             1:                  \n
             ldr r0, =0x20004000 \n
@@ -1125,8 +1181,8 @@ extern "C" {
             ldr r2, [sp, 0x18]  \n
             ldr r3, [sp, 0x14]  \n
             stm r0!, {r1-r3}    \n
-            ldr r6, =projectName \n
-            ldm r6!, {r1-r4}     \n
+            ldr r6, =projectName\n
+            ldm r6!, {r1-r4}    \n
             stm r0!, {r1-r5}    \n
             ldr r1, =0x05FA0004 \n
             ldr r0, =0xE000ED0C \n
@@ -1134,12 +1190,13 @@ extern "C" {
             );
     }
 }
+/* */
 
 int main(){
     {
         bool crashed = *magicPtr == magic;
         u32 crashLocation = magicPtr[1] >= 0x20000000 && magicPtr[1] < 0x20000800 ? magicPtr[1] : magicPtr[2];
-        if( !crashed && ((volatile uint32_t *) 0xE000ED00)[0] != 1947 ){
+        if( !crashed && !devmode ){
             PC::begin();
         } else {
             PC::init();
