@@ -18,11 +18,17 @@ namespace pine {
         }
 
         void setCache(u32 *ptr, u32 size){
+            if(cacheSize){
+                file.seek(0);
+                for(u32 i = 0; i<cacheSize && i < resCount; ++i){
+                    file << cache[i*2] << cache[i*2+1];
+                }
+            }
             cache = ptr;
             cacheSize = size >> 3;
             file.seek(0);
-            for(u32 i = 0; i<cacheSize; i += 2){
-                file >> cache[i] >> cache[i+1];
+            for(u32 i = 0; i<cacheSize; ++i){
+                file >> cache[i*2] >> cache[i*2+1];
             }
         }
 
@@ -40,8 +46,16 @@ namespace pine {
             u32 pos = resCount;
             u32 offset = std::max(capacity * 8, fileSize);
             for(u32 i = 0; i < resCount; ++i){
-                file.seek(i * 8);
-                u32 otherKey = file.read<u32>();
+                u32 otherKey;
+
+                if(i < cacheSize){
+                    otherKey = cache[i*2];
+                }else{
+                    file.seek(i * 8);
+                    otherKey = file.read<u32>();
+                    // file.read<u32>();
+                }
+
                 if(otherKey == key){
                     // u32 oldPos = file.read<u32>();
                     // return at(oldPos);
@@ -65,8 +79,15 @@ namespace pine {
             //     po = oo;
             // }
 
-            file.seek(resCount++ * 8);
-            file << pk << po;
+            if(resCount < cacheSize){
+                cache[resCount * 2] = pk;
+                cache[resCount * 2 + 1] = po;
+            } else {
+                file.seek(resCount * 8);
+                file << pk << po;
+            }
+            resCount++;
+
             file.seek(offset);
             return &file;
         }

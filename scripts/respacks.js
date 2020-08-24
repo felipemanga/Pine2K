@@ -30,23 +30,14 @@ function start(rootPath, root){
     let promises = [];
     let hashes = {};
     let acc = [];
-    let count = 0;
 
     Promise.all((dir(rootPath)||[])
-    .filter( file=>/\.png$/i.test(file) )
-    .map( (file) => {
-        return readImage(`${rootPath}/${file}`)
-            .then( image => {
-                let img = convert(image, 0, 0, image.width, image.height);
-                let key = hash(file.replace(/\..*/g, ""));
-                if(hashes[key]){
-                    log("Collision: ", key, file, hashes[key].file);
-                }
-                hashes[key] = {key, file, img, pos:0};
-                count++;
-                return true;
-            });
+        .map( (file) => {
+            if(/\.png$/i.test(file))
+                return addImage(rootPath, file, hashes);
+            return addMisc(rootPath, file, hashes);
     })).then(_=>{
+        const count = Object.keys(hashes).length;
         if(count == 0)
             return;
 
@@ -57,38 +48,48 @@ function start(rootPath, root){
             (count >> 24)&0xFF
         ];
 
-        Object.values(hashes)
-            .forEach( entry => {
-                optimize(entry);
-            });
-
-        let byHash = Object.values(hashes).sort((a, b) => a.key - b.key);
+        let byHash = Object.keys(hashes).sort((ka, kb) => (ka>>>0) > (kb>>>0) ? 1 : -1);
         let bySize = Object.values(hashes).sort((a, b) => a.img.length - b.img.length);
         let pos = byHash.length * 8 + 4;
         for(let i=0; i<count; ++i){
+            if(bySize[i].pos) continue;
             bySize[i].pos = pos;
             pos += bySize[i].img.length + 4;
         }
 
         for(let i=0; i<count; ++i){
-            let hash = byHash[i].key;
-            let pos = byHash[i].pos;
+            let hash = byHash[i];
+            let entry = hashes[hash];
+            let pos = entry.pos;
+            /* verbose * /
+            log(
+                i.toString().padStart(2, "_") + ") ",
+                hash.toString().padStart(15, "_"),
+                ((hash >>  0)&0xFF).toString(16).padStart(2, '0'),
+                ((hash >>  8)&0xFF).toString(16).padStart(2, '0'),
+                ((hash >> 16)&0xFF).toString(16).padStart(2, '0'),
+                ((hash >> 24)&0xFF).toString(16).padStart(2, '0'),
+                entry.file, pos);
+            /* */
             acc.push(
-                (hash >> 0)&0xFF,
-                (hash >> 8)&0xFF,
+                (hash >>  0)&0xFF,
+                (hash >>  8)&0xFF,
                 (hash >> 16)&0xFF,
                 (hash >> 24)&0xFF
             );
             acc.push(
-                (pos >> 0)&0xFF,
-                (pos >> 8)&0xFF,
+                (pos >>  0)&0xFF,
+                (pos >>  8)&0xFF,
                 (pos >> 16)&0xFF,
                 (pos >> 24)&0xFF
             );
         }
 
         for(let i=0; i<count; ++i){
-            let img = bySize[i].img;
+            let entry = bySize[i];
+            if(entry.written) continue;
+            entry.written = true;
+            let img = entry.img;
             acc = [
                 ...acc,
                 (img.length >> 0)&0xFF,
@@ -100,14 +101,42 @@ function start(rootPath, root){
         }
 
         write(`${rootPath}.res`, new Uint8Array(acc));
-        log(`${root} packaged!`);
+        log(`${rootPath} packaged!`);
     })
     .catch(ex=>{
         log(ex);
     });
 }
 
-function optimize(entry){
+function addMisc(rootPath, file, hashes){
+    let key = hash(file);
+    if(hashes[key]){
+        log("Collision: ", key, file, hashes[key].file);
+    }
+
+    let img = fs.readFileSync( DATA.projectPath + path.sep + `${rootPath}/${file}`);
+    let entry = {key, img, file, pos:0};
+    hashes[key] = entry;
+    return true;
+}
+
+function addImage(rootPath, file, hashes){
+    return readImage(`${rootPath}/${file}`)
+        .then( image => {
+            let img = convert(image, 0, 0, image.width, image.height);
+            let key = hash(file.replace(/\..*/g, ""));
+            let key8 = hash(file.replace(/\..*/g, "") + ":8");
+            if(hashes[key] || hashes[key8]){
+                log("Collision: ", key, file, hashes[key].file);
+            }
+            let entry = {key, key8, file, img, pos:0};
+            hashes[key] = entry;
+            optimize(entry, hashes);
+            return true;
+        });
+}
+
+function optimize(entry, hashes){
     let minC = 300;
     let maxC = -1;
     let data = entry.img;
@@ -118,6 +147,24 @@ function optimize(entry){
         if( c > maxC ) maxC = c;
     }
     let range = maxC - minC;
+
+    if(hashes[entry.key8]){
+        log("Collision: ", entry.key8, entry.file, hashes[entry.key8].file);
+    }
+
+    if(data[0]*data[1]<128*128)
+    {
+        if(range < 16){
+            let img8 = Object.assign({}, entry);
+            img8.key = img8.key8;
+            img8.file += ":8";
+            optimize256(img8);
+            hashes[img8.key] = img8;
+        } else {
+            hashes[entry.key8] = entry;
+        }
+    }
+
     if(range == 0){
         optimize1(minC, entry);
     }else if( range < 16 ){

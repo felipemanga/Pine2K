@@ -69,6 +69,8 @@ namespace pine {
     }
 
     inline u32 *arrayFromPtr(u32 x){
+        if(x < 0x10000000 || x >= 0x10008000)
+            return nullptr;
         auto ptr = reinterpret_cast<u32*>(x);
         for(ArrayHeader array(arrays); array; ++array){
             if((array.data <= ptr) && (array.data + (array.length << 2)) > ptr)
@@ -149,7 +151,7 @@ namespace pine {
             }else{
                 cc++;
                 *prev = (*prev & 2) | (array.next & 0x7FFC);
-                // LOG("Collect ", array.data - 1, "\n");
+                LOG("Collect ", array.data - 1, "\n");
                 delete[] (array.data - 1);
             }
         }
@@ -190,6 +192,7 @@ namespace pine {
         return array + 1;
     }
 
+    template<typename SymTable>
     class SimplePine {
         static constexpr const u32 dataSection = 0x20004000;
         static constexpr const u32 codeSection = 0x20000000;
@@ -200,17 +203,17 @@ namespace pine {
         cg::BufferWriter<2048> writer;
         /* */
         cg::CodeGen<decltype(writer)> cg;
-        ia::InfiniteArray<Sym, 32> symTable;
+        SymTable& symTable;
         ResTable& resTable;
         Pine<decltype(cg), decltype(symTable)> pine;
         bool wasInit = false;
 
     public:
-        SimplePine(const char *file, ResTable &resTable) :
+        SimplePine(const char *file, ResTable &resTable, SymTable &symTable) :
             tok(file),
             writer /* * / ("pine.bin"), /*/ (reinterpret_cast<void*>(codeSection)) /* */,
             cg(writer),
-            symTable("pine-2k/symbols.tmp"),
+            symTable(symTable),// ("pine-2k/symbols.tmp"),
             resTable(resTable),
             pine(tok, cg, symTable, resTable, dataSection)
             {

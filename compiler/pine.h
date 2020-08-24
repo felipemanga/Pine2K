@@ -1083,7 +1083,8 @@ public:
                     }
                 }else{
                     if(rkctv == 1){
-                        break;
+                        symId = lsymId;
+                        return;
                     }else if(isPOT){
                         // rightImmFunc = &CodeGen::ASRS;
                         rkctv = shifts;
@@ -1092,7 +1093,7 @@ public:
                         auto &lsym = load(lsymId);
                         if(!doAssign) commit(lsym, lsymId);
                         else lsym.setDirty();
-                        codegen.LSRS(Rt, cg::RegLow(lsym.reg), 31);
+                        codegen.LSRS(Rt, cg::RegLow(lsym.reg), 32 - rkctv);
                         codegen.ADDS(cg::RegLow(lsym.reg), Rt);
                         codegen.ASRS(cg::RegLow(lsym.reg), rkctv);
                         renameSym = lsymId;
@@ -1102,13 +1103,11 @@ public:
             }
 
             commitScratch();
-            spill(cg::R2);
             if(op == "%"_token){
-                codegen.LDRI(cg::R2, reinterpret_cast<uintptr_t>(__aeabi_uidivmod));
+                codegen.LDRI(Rt, reinterpret_cast<uintptr_t>(__aeabi_uidivmod));
             }else{
-                codegen.LDRI(cg::R2, reinterpret_cast<uintptr_t>(__aeabi_idiv));
+                codegen.LDRI(Rt, reinterpret_cast<uintptr_t>(__aeabi_idiv));
             }
-            regAlloc.hold(cg::R2);
 
             loadToRegister(symId, 1);
             regAlloc.assign(symId, cg::R1);
@@ -1116,18 +1115,19 @@ public:
             loadToRegister(lsymId, 0);
             regAlloc.assign(lsymId, cg::R0);
 
-            codegen.BLX(cg::R2);
-            regAlloc.release(cg::R2);
+            codegen.BLX(Rt);
             invalidateRegisters(false);
 
             if(doAssign) tmpId = lsymId;
             auto &tmp = symTable[tmpId];
             tmp.reg = op == "%"_token;
             tmp.clearKCTV();
+            tmp.setDirty();
             regAlloc.assign(tmpId, cg::RegLow(tmp.reg));
 
             symTable[symId].hitTemp();
             symTable[lsymId].hitTemp();
+            tmp.unhitTemp();
             symId = tmpId;
             return;
         }
@@ -1577,8 +1577,9 @@ public:
             setError("Unexpected token (not [)");
             return;
         }
+        // LOG("begin Array ", arrayId, "\n");
         gcLock(true);
-        auto ptr = reinterpret_cast<u32*>(0x20004000 + arrayId * 4);
+        auto ptr = reinterpret_cast<u32*>(0x20004000);
         u32 start = arrayId;
         while(!error && tok.getClass() != TokenClass::Eof){
             if(arrayId * 4 >= 0x800){
@@ -1591,6 +1592,7 @@ public:
                 setError("Invalid Array literal value");
                 return;
             }
+            // LOG(ptr + arrayId, " = ", (void*) sym.kctv, "\n");
             ptr[arrayId++] = sym.kctv;
             sym.hitTemp();
             if(!accept(","_token))
@@ -1604,7 +1606,8 @@ public:
         // LOG("Creating array of size ", byteSize, "\n");
         void *out = allocator(byteSize);
         gcLock(false);
-        memcpy(out, ptr, byteSize);
+        memcpy(out, ptr + start, byteSize);
+        // LOG("end Array ", start, "[0]=", reinterpret_cast<uint32_t*>(out)[0], "\n");
         arrayId = start;
         u32 tmpId = createTmpSymbol();
         symTable[tmpId].setKCTV(reinterpret_cast<uintptr_t>(out));
@@ -1616,6 +1619,7 @@ public:
         u32 start = tok.getLocation();
         u32 len = 0;
         u32 hash = 5381 * 31 + '"';
+        char *ptr = reinterpret_cast<char*>(0x20004000 + arrayId * 4);
         while(tok.isString()){
             char ch = tok.getText()[0];
             if(ch == '\\'){
@@ -1625,27 +1629,35 @@ public:
                 default: break;
                 }
             }
+            if(len < (0x800 - arrayId * 4)){
+                ptr[len] = ch;
+            }
             len++;
             hash = hash * 31 + ch;
             accept();
         }
         File *file = resTable.write(hash);
         if( file ){
-            tok.setLocation(start - 3, line);
-            accept();
-            for(u32 i = 0; i < len; ++i){
-                char ch = tok.getText()[0];
-                if(ch == '\\'){
-                    ch = tok.getText()[1];
-                    switch(ch){
-                    case 'n': ch = 10; break;
-                    default: break;
-                    }
-                }
-                (*file) << ch;
+            if(len < (0x800 - arrayId * 4)){
+                file->write(ptr, len);
+                (*file) << '\0';
+            } else {
+                tok.setLocation(start - 3, line);
                 accept();
+                for(u32 i = 0; i < len; ++i){
+                    char ch = tok.getText()[0];
+                    if(ch == '\\'){
+                        ch = tok.getText()[1];
+                        switch(ch){
+                        case 'n': ch = 10; break;
+                        default: break;
+                        }
+                    }
+                    (*file) << ch;
+                    accept();
+                }
+                (*file) << '\0';
             }
-            (*file) << '\0';
         }
         symId = createTmpSymbol();
         auto &sym = symTable[symId];
@@ -2157,11 +2169,11 @@ public:
                 sym.hitTemp();
                 if(sym.kctv){
                     statementOrBlock();
-                    return;
                 }else if (token == "{"_token){
                     deadBlock();
-                    return;
                 }
+                accept("else"_token);
+                return;
             }
 
             toBranch(failLabel);
